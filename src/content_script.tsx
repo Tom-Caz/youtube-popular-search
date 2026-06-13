@@ -24,6 +24,7 @@ const TIME_RANGES: TimeRange[] = [
 const DEFAULT_RANGE: TimeRangeId = "all";
 const STORAGE_KEY = "ytps_selected_range";
 const PROCESSED_ATTR = "data-ytps-processed";
+const SIBLING_PROCESSED_ATTR = "data-ytps-sibling-processed";
 
 let selectedRange: TimeRangeId = DEFAULT_RANGE;
 let currentMenu: HTMLElement | null = null;
@@ -264,13 +265,43 @@ function enhancePopularChip(button: HTMLButtonElement): void {
   );
 }
 
+// "Latest"/"Oldest" know nothing about our results panel, so clicking them
+// while it's open would leave it (and the hidden native grid) in place.
+function enhanceSiblingChips(popularButton: HTMLButtonElement): void {
+  const chipBar = popularButton.closest("chip-bar-view-model");
+  if (!chipBar) return;
+
+  chipBar
+    .querySelectorAll<HTMLButtonElement>('button[aria-label="Latest"], button[aria-label="Oldest"]')
+    .forEach((button) => {
+      if (button.hasAttribute(SIBLING_PROCESSED_ATTR)) return;
+      button.setAttribute(SIBLING_PROCESSED_ATTR, "true");
+
+      button.addEventListener("click", () => {
+        const richGrid = button.closest("ytd-rich-grid-renderer");
+        if (!richGrid) return;
+
+        removeResultsPanel(richGrid);
+        const contents = richGrid.querySelector<HTMLElement>("#contents");
+        if (contents) contents.style.display = "";
+
+        const bar = button.closest("chip-bar-view-model");
+        bar?.querySelectorAll<HTMLElement>("button[aria-label]").forEach((chip) => {
+          setChipActive(chip, chip === button);
+        });
+      });
+    });
+}
+
 function scanForPopularChip(): void {
   const candidates = document.querySelectorAll<HTMLButtonElement>(
     `button[aria-label="Popular"]:not([${PROCESSED_ATTR}])`
   );
 
   candidates.forEach((button) => {
-    if (isChannelSortChip(button)) enhancePopularChip(button);
+    if (!isChannelSortChip(button)) return;
+    enhancePopularChip(button);
+    enhanceSiblingChips(button);
   });
 }
 
