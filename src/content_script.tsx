@@ -31,6 +31,11 @@ let currentMenu: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
 let bypassNextClick = false;
 
+// Tracks which page path a chip's range was last applied for, so a
+// non-default selection is (re)applied on page load and whenever YouTube
+// navigates to a different channel, but not on every unrelated DOM mutation.
+const lastAppliedPath = new WeakMap<HTMLButtonElement, string>();
+
 function rangeLabel(id: TimeRangeId): string {
   return TIME_RANGES.find((range) => range.id === id)!.label;
 }
@@ -95,7 +100,25 @@ function selectRange(button: HTMLButtonElement, rangeId: TimeRangeId): void {
   updateChipLabel(button);
   persistSelectedRange(rangeId);
   closeMenu();
+  lastAppliedPath.set(button, window.location.pathname);
   void applyRange(button, rangeId);
+}
+
+// Re-applies the persisted range for any Popular chip whose page path has
+// changed since we last applied it, e.g. after a reload or after YouTube
+// reuses the same chip bar/grid for a different channel.
+function applyPersistedRange(): void {
+  if (selectedRange === DEFAULT_RANGE) return;
+
+  document.querySelectorAll<HTMLButtonElement>('button[aria-label="Popular"]').forEach((button) => {
+    if (!isChannelSortChip(button)) return;
+
+    const path = window.location.pathname;
+    if (lastAppliedPath.get(button) === path) return;
+
+    lastAppliedPath.set(button, path);
+    void applyRange(button, selectedRange);
+  });
 }
 
 function setChipActive(chip: HTMLElement, active: boolean): void {
@@ -303,6 +326,8 @@ function scanForPopularChip(): void {
     enhancePopularChip(button);
     enhanceSiblingChips(button);
   });
+
+  applyPersistedRange();
 }
 
 function init(): void {
