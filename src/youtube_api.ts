@@ -22,7 +22,10 @@ export class YouTubeApiError extends Error {
 
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 
-export function getChannelId(): string | null {
+// Fallback for pages whose URL doesn't identify the channel: scrape the
+// canonical link / embedded page data, which can be stale after a
+// client-side navigation.
+function getChannelIdFromPage(): string | null {
   const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
   const canonicalMatch = canonical?.href.match(/\/channel\/(UC[\w-]{10,})/);
   if (canonicalMatch) return canonicalMatch[1];
@@ -33,6 +36,54 @@ export function getChannelId(): string | null {
   }
 
   return null;
+}
+
+type ChannelIdentifier =
+  | { channelId: string }
+  | { param: "forHandle" | "forUsername"; value: string };
+
+// Unlike the page's embedded data, the URL is always up to date immediately
+// after YouTube's SPA navigations, so prefer it for identifying the channel.
+function getChannelIdentifierFromUrl(): ChannelIdentifier | null {
+  const path = window.location.pathname;
+
+  const channelMatch = path.match(/^\/channel\/(UC[\w-]{10,})/);
+  if (channelMatch) return { channelId: channelMatch[1] };
+
+  const handleMatch = path.match(/^\/(@[\w.-]+)/);
+  if (handleMatch) return { param: "forHandle", value: handleMatch[1] };
+
+  const userMatch = path.match(/^\/(?:c|user)\/([\w.-]+)/);
+  if (userMatch) return { param: "forUsername", value: userMatch[1] };
+
+  return null;
+}
+
+const channelIdCache = new Map<string, string>();
+
+/**
+ * Resolves the current page's channel ID. @handle and legacy /c//user/ URLs
+ * require a Data API lookup, which is cached for the lifetime of the page.
+ */
+export async function resolveChannelId(apiKey: string): Promise<string | null> {
+  const identifier = getChannelIdentifierFromUrl();
+  if (!identifier) return getChannelIdFromPage();
+  if ("channelId" in identifier) return identifier.channelId;
+
+  const cacheKey = `${identifier.param}:${identifier.value}`;
+  const cached = channelIdCache.get(cacheKey);
+  if (cached) return cached;
+
+  const params = new URLSearchParams({
+    part: "id",
+    key: apiKey,
+    [identifier.param]: identifier.value,
+  });
+
+  const data = await fetchJson(`${API_BASE}/channels?${params.toString()}`);
+  const channelId = data.items?.[0]?.id as string | undefined;
+  if (channelId) channelIdCache.set(cacheKey, channelId);
+  return channelId ?? null;
 }
 
 export function getPublishedAfter(rangeId: TimeRangeId, now: Date = new Date()): string | null {

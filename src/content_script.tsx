@@ -3,8 +3,8 @@ import {
   YouTubeApiError,
   fetchPopularVideos,
   getApiKey,
-  getChannelId,
   getPublishedAfter,
+  resolveChannelId,
 } from "./youtube_api";
 import { ensureResultsPanel, removeResultsPanel, renderStatus, renderVideos } from "./results_panel";
 
@@ -145,18 +145,18 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
   const panel = ensureResultsPanel(richGrid);
   renderStatus(panel, "Loading popular videos…");
 
-  const channelId = getChannelId();
-  if (!channelId) {
-    renderStatus(panel, "Couldn't determine the channel for this page.");
-    return;
-  }
-
   const apiKey = await getApiKey();
   if (!apiKey) {
     renderStatus(
       panel,
       "Add a YouTube Data API key in the extension's options page to enable time-based Popular sorting."
     );
+    return;
+  }
+
+  const channelId = await resolveChannelId(apiKey);
+  if (!channelId) {
+    renderStatus(panel, "Couldn't determine the channel for this page.");
     return;
   }
 
