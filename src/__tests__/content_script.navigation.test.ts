@@ -61,8 +61,16 @@ function popularButton(): HTMLButtonElement {
   return document.querySelector<HTMLButtonElement>('button[aria-label="Popular"]')!;
 }
 
+function popularRangeLabel(): string | null | undefined {
+  return popularButton().querySelector(".ytps-range")?.textContent;
+}
+
 function richGrid(): HTMLElement {
   return document.querySelector("ytd-rich-grid-renderer")!;
+}
+
+function contents(): HTMLElement {
+  return richGrid().querySelector<HTMLElement>("#contents")!;
 }
 
 const FAKE_VIDEO: PopularVideo = {
@@ -81,49 +89,63 @@ vi.mocked(getVideoKindFromUrl).mockImplementation(() =>
   /\/shorts(\/|$)/.test(window.location.pathname) ? "shorts" : "videos"
 );
 
-describe("content_script: stale results panel across Videos<->Shorts navigation", () => {
-  it("refetches with the new videoKind and refreshes the panel in place on tab navigation", async () => {
-    // Select "This week" while on the Videos tab.
-    popularButton().click();
-    const menu = document.querySelector(".ytps-menu")!;
-    const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
-      (el) => el.textContent === "This week"
-    )!;
-    weekItem.click();
+function selectThisWeek(): void {
+  popularButton().click();
+  const menu = document.querySelector(".ytps-menu")!;
+  const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
+    (el) => el.textContent === "This week"
+  )!;
+  weekItem.click();
+}
+
+beforeEach(() => {
+  vi.mocked(fetchPopularVideos).mockClear();
+  vi.mocked(renderVideos).mockClear();
+});
+
+describe("content_script: navigating away wipes the selected range", () => {
+  it("resets to 'All time' and removes the results panel when switching from Videos to Shorts", async () => {
+    selectThisWeek();
 
     await vi.waitFor(() => expect(fetchPopularVideos).toHaveBeenCalledTimes(1));
-    expect(fetchPopularVideos).toHaveBeenNthCalledWith(
-      1,
-      "UCabc123",
-      "FAKE_KEY",
-      "2024-01-01T00:00:00.000Z",
-      "videos"
-    );
+    await vi.waitFor(() => expect(renderVideos).toHaveBeenCalledWith(expect.anything(), [FAKE_VIDEO]));
 
-    const panelBefore = richGrid().querySelector(".ytps-results");
-    expect(panelBefore).not.toBeNull();
+    expect(popularRangeLabel()).toBe(" · This week");
+    expect(richGrid().querySelector(".ytps-results")).not.toBeNull();
+    expect(contents().style.display).toBe("none");
 
-    // Navigate to the Shorts tab.
+    // Navigate to the Shorts tab (the chip bar/rich grid are reused).
     window.history.pushState({}, "", "/@SomeChannel/shorts");
     document.dispatchEvent(new Event("yt-navigate-finish"));
 
-    await vi.waitFor(() => expect(fetchPopularVideos).toHaveBeenCalledTimes(2));
-    expect(fetchPopularVideos).toHaveBeenNthCalledWith(
-      2,
-      "UCabc123",
-      "FAKE_KEY",
-      "2024-01-01T00:00:00.000Z",
-      "shorts"
-    );
+    expect(popularRangeLabel()).toBe(" · All time");
+    expect(richGrid().querySelector(".ytps-results")).toBeNull();
+    expect(contents().style.display).toBe("");
 
-    await vi.waitFor(() => expect(richGrid().querySelector(".ytps-results")).not.toBeNull());
+    // Wiping the range on navigation must not trigger a refetch.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(fetchPopularVideos).toHaveBeenCalledTimes(1);
+  });
 
-    // Dispatch yt-navigate-finish again without changing the path: no redundant refetch.
+  it("does not carry a custom range over to a different channel", async () => {
+    selectThisWeek();
+
+    await vi.waitFor(() => expect(fetchPopularVideos).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(renderVideos).toHaveBeenCalledWith(expect.anything(), [FAKE_VIDEO]));
+
+    expect(popularRangeLabel()).toBe(" · This week");
+
+    // Navigate away to a brand new channel's videos page (fresh chip-bar DOM).
+    window.history.pushState({}, "", "/@AnotherChannel/videos");
+    document.body.innerHTML = richGridFixtureHtml();
     document.dispatchEvent(new Event("yt-navigate-finish"));
 
-    // Give any potential (incorrect) async refetch a chance to occur.
-    await new Promise((r) => setTimeout(r, 0));
+    expect(popularButton().getAttribute("data-ytps-processed")).toBe("true");
+    expect(popularRangeLabel()).toBe(" · All time");
+    expect(richGrid().querySelector(".ytps-results")).toBeNull();
 
-    expect(fetchPopularVideos).toHaveBeenCalledTimes(2);
+    // No additional fetch triggered by the reset/re-enhancement.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(fetchPopularVideos).toHaveBeenCalledTimes(1);
   });
 });
