@@ -22,7 +22,6 @@ const TIME_RANGES: TimeRange[] = [
 ];
 
 const DEFAULT_RANGE: TimeRangeId = "all";
-const STORAGE_KEY = "ytps_selected_range";
 const PROCESSED_ATTR = "data-ytps-processed";
 const SIBLING_PROCESSED_ATTR = "data-ytps-sibling-processed";
 
@@ -30,11 +29,6 @@ let selectedRange: TimeRangeId = DEFAULT_RANGE;
 let currentMenu: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
 let bypassNextClick = false;
-
-// Tracks which page path a chip's range was last applied for, so a
-// non-default selection is (re)applied on page load and whenever YouTube
-// navigates to a different channel, but not on every unrelated DOM mutation.
-const lastAppliedPath = new WeakMap<HTMLButtonElement, string>();
 
 function rangeLabel(id: TimeRangeId): string {
   return TIME_RANGES.find((range) => range.id === id)!.label;
@@ -86,10 +80,6 @@ function positionMenu(menu: HTMLElement, button: HTMLButtonElement): void {
   menu.style.left = `${rect.left}px`;
 }
 
-function persistSelectedRange(rangeId: TimeRangeId): void {
-  chrome.storage?.local?.set({ [STORAGE_KEY]: rangeId });
-}
-
 function updateChipLabel(button: HTMLButtonElement): void {
   const rangeSpan = button.querySelector<HTMLSpanElement>(".ytps-range");
   if (rangeSpan) rangeSpan.textContent = ` · ${rangeLabel(selectedRange)}`;
@@ -98,27 +88,8 @@ function updateChipLabel(button: HTMLButtonElement): void {
 function selectRange(button: HTMLButtonElement, rangeId: TimeRangeId): void {
   selectedRange = rangeId;
   updateChipLabel(button);
-  persistSelectedRange(rangeId);
   closeMenu();
-  lastAppliedPath.set(button, window.location.pathname);
   void applyRange(button, rangeId);
-}
-
-// Re-applies the persisted range for any Popular chip whose page path has
-// changed since we last applied it, e.g. after a reload or after YouTube
-// reuses the same chip bar/grid for a different channel.
-function applyPersistedRange(): void {
-  if (selectedRange === DEFAULT_RANGE) return;
-
-  document.querySelectorAll<HTMLButtonElement>('button[aria-label="Popular"]').forEach((button) => {
-    if (!isChannelSortChip(button)) return;
-
-    const path = window.location.pathname;
-    if (lastAppliedPath.get(button) === path) return;
-
-    lastAppliedPath.set(button, path);
-    void applyRange(button, selectedRange);
-  });
 }
 
 function setChipActive(chip: HTMLElement, active: boolean): void {
@@ -326,26 +297,17 @@ function scanForPopularChip(): void {
     enhancePopularChip(button);
     enhanceSiblingChips(button);
   });
-
-  applyPersistedRange();
 }
 
 function init(): void {
-  chrome.storage?.local?.get([STORAGE_KEY], (result) => {
-    const stored = result?.[STORAGE_KEY] as TimeRangeId | undefined;
-    if (stored && TIME_RANGES.some((range) => range.id === stored)) {
-      selectedRange = stored;
-    }
+  scanForPopularChip();
 
+  const observer = new MutationObserver(() => scanForPopularChip());
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  document.addEventListener("yt-navigate-finish", () => {
+    closeMenu();
     scanForPopularChip();
-
-    const observer = new MutationObserver(() => scanForPopularChip());
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-
-    document.addEventListener("yt-navigate-finish", () => {
-      closeMenu();
-      scanForPopularChip();
-    });
   });
 }
 
