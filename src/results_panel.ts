@@ -84,9 +84,12 @@ export function formatRelativeDate(iso: string): string {
   if (diffDays === 1) return "1 day ago";
   if (diffDays < 30) return `${diffDays} days ago`;
 
-  const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths < 12) return `${diffMonths} month${diffMonths > 1 ? "s" : ""} ago`;
+  if (diffDays < 365) {
+    const diffMonths = Math.round(diffDays / 30.44);
+    if (diffMonths >= 12) return "1 year ago";
+    return `${diffMonths} month${diffMonths > 1 ? "s" : ""} ago`;
+  }
 
-  const diffYears = Math.floor(diffDays / 365);
+  const diffYears = Math.round(diffDays / 365.25);
   return `${diffYears} year${diffYears > 1 ? "s" : ""} ago`;
 }
