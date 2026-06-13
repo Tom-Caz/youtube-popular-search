@@ -11,5 +11,6 @@
         "noEmitOnError": true,
         "jsx": "react",
         "typeRoots": [ "node_modules/@types" ]
-    }
+    },
+    "exclude": ["src/__tests__", "vitest.config.ts"]
 }
