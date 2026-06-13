@@ -1,5 +1,23 @@
 export type TimeRangeId = "today" | "week" | "month" | "year" | "all";
 
+export type VideoKind = "videos" | "shorts";
+
+// YouTube Shorts are at most 3 minutes long; everything longer is a regular video.
+const SHORTS_MAX_DURATION_SECONDS = 183;
+
+// Determines whether the current channel tab is "Videos" or "Shorts" so
+// search results can be filtered to match (search.list returns both kinds).
+export function getVideoKindFromUrl(): VideoKind {
+  return /\/shorts(\/|$)/.test(window.location.pathname) ? "shorts" : "videos";
+}
+
+function parseDurationSeconds(duration: string | undefined): number {
+  const match = duration?.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+  if (!match) return 0;
+  const [, hours, minutes, seconds] = match;
+  return (Number(hours) || 0) * 3600 + (Number(minutes) || 0) * 60 + (Number(seconds) || 0);
+}
+
 export const API_KEY_STORAGE_KEY = "ytps_api_key";
 
 export interface PopularVideo {
@@ -140,7 +158,8 @@ export async function fetchPopularVideos(
   channelId: string,
   apiKey: string,
   publishedAfter: string | null,
-  maxResults = 24
+  videoKind: VideoKind,
+  maxResults = 50
 ): Promise<PopularVideo[]> {
   const searchParams = new URLSearchParams({
     part: "snippet",
@@ -158,18 +177,25 @@ export async function fetchPopularVideos(
   if (videoIds.length === 0) return [];
 
   const statsParams = new URLSearchParams({
-    part: "statistics",
+    part: "statistics,contentDetails",
     id: videoIds.join(","),
     key: apiKey,
   });
   const statsData = await fetchJson(`${API_BASE}/videos?${statsParams.toString()}`);
   const viewCounts = new Map<string, number>();
+  const durations = new Map<string, number>();
   for (const item of statsData.items ?? []) {
     viewCounts.set(item.id, Number(item.statistics?.viewCount ?? 0));
+    durations.set(item.id, parseDurationSeconds(item.contentDetails?.duration));
   }
 
   return items
     .filter((item) => item.id?.videoId)
+    .filter((item) => {
+      const duration = durations.get(item.id.videoId) ?? Number.MAX_SAFE_INTEGER;
+      const isShort = duration <= SHORTS_MAX_DURATION_SECONDS;
+      return isShort === (videoKind === "shorts");
+    })
     .map((item) => ({
       videoId: item.id.videoId as string,
       title: item.snippet?.title ?? "",

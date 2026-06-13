@@ -4,6 +4,7 @@ import {
   fetchPopularVideos,
   getApiKey,
   getPublishedAfter,
+  getVideoKindFromUrl,
   resolveChannelId,
 } from "./youtube_api";
 import { ensureResultsPanel, removeResultsPanel, renderStatus, renderVideos } from "./results_panel";
@@ -156,7 +157,7 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
 
   try {
     const publishedAfter = getPublishedAfter(rangeId);
-    const videos = await fetchPopularVideos(channelId, apiKey, publishedAfter);
+    const videos = await fetchPopularVideos(channelId, apiKey, publishedAfter, getVideoKindFromUrl());
     if (videos.length === 0) {
       renderStatus(panel, `No videos found for "${rangeLabel(rangeId)}".`);
     } else {
