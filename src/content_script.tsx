@@ -1,4 +1,12 @@
-type TimeRangeId = "today" | "week" | "month" | "year" | "all";
+import {
+  TimeRangeId,
+  YouTubeApiError,
+  fetchPopularVideos,
+  getApiKey,
+  getChannelId,
+  getPublishedAfter,
+} from "./youtube_api";
+import { ensureResultsPanel, removeResultsPanel, renderStatus, renderVideos } from "./results_panel";
 
 interface TimeRange {
   id: TimeRangeId;
@@ -86,10 +94,82 @@ function selectRange(button: HTMLButtonElement, rangeId: TimeRangeId): void {
   updateChipLabel(button);
   persistSelectedRange(rangeId);
   closeMenu();
+  void applyRange(button, rangeId);
+}
 
-  // Trigger YouTube's native "Popular" sort (closest equivalent today is all-time view count).
-  bypassNextClick = true;
-  button.click();
+function setChipActive(chip: HTMLElement, active: boolean): void {
+  chip.setAttribute("aria-selected", String(active));
+  const shape = chip.querySelector(".ytChipShapeChip");
+  shape?.classList.toggle("ytChipShapeActive", active);
+  shape?.classList.toggle("ytChipShapeInactive", !active);
+}
+
+function setPopularActive(popularButton: HTMLButtonElement): void {
+  const chipBar = popularButton.closest("chip-bar-view-model");
+  chipBar?.querySelectorAll<HTMLElement>("button[aria-label]").forEach((chip) => {
+    setChipActive(chip, chip === popularButton);
+  });
+}
+
+function describeFetchError(error: unknown): string {
+  if (error instanceof YouTubeApiError) {
+    if (error.status === 403) {
+      return "YouTube API request was rejected. Check your API key and quota in the extension's options page.";
+    }
+    return `YouTube API error: ${error.message}`;
+  }
+  return "Couldn't load popular videos. Please try again later.";
+}
+
+async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Promise<void> {
+  const richGrid = button.closest("ytd-rich-grid-renderer");
+  if (!richGrid) return;
+
+  if (rangeId === "all") {
+    removeResultsPanel(richGrid);
+    const contents = richGrid.querySelector<HTMLElement>("#contents");
+    if (contents) contents.style.display = "";
+
+    // Trigger YouTube's native "Popular" sort (its closest equivalent is all-time view count).
+    bypassNextClick = true;
+    button.click();
+    return;
+  }
+
+  setPopularActive(button);
+
+  const contents = richGrid.querySelector<HTMLElement>("#contents");
+  if (contents) contents.style.display = "none";
+
+  const panel = ensureResultsPanel(richGrid);
+  renderStatus(panel, "Loading popular videos…");
+
+  const channelId = getChannelId();
+  if (!channelId) {
+    renderStatus(panel, "Couldn't determine the channel for this page.");
+    return;
+  }
+
+  const apiKey = await getApiKey();
+  if (!apiKey) {
+    renderStatus(
+      panel,
+      "Add a YouTube Data API key in the extension's options page to enable time-based Popular sorting."
+    );
+    return;
+  }
+
+  try {
+    const publishedAfter = getPublishedAfter(rangeId);
+    const videos = await fetchPopularVideos(channelId, apiKey, publishedAfter);
+    if (videos.length === 0) {
+      renderStatus(panel, `No videos found for "${rangeLabel(rangeId)}".`);
+    } else {
+      renderVideos(panel, videos);
+    }
+  } catch (error) {
+    renderStatus(panel, describeFetchError(error));
+  }
 }
 
 function buildMenu(button: HTMLButtonElement): HTMLElement {
