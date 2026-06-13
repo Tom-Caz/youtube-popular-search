@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
 
-  "name": "Chrome Extension TypeScript Starter",
-  "description": "Chrome Extension, TypeScript, Visual Studio Code",
-  "version": "1.0",
+  "name": "YouTube Popular Search",
+  "description": "Adds a time-range dropdown (Today/Week/Month/Year/All time) to YouTube's Popular sort, like Reddit's sort menu.",
+  "version": "0.1.0",
 
   "options_ui": {
     "page": "options.html"
@@ -16,8 +16,10 @@
 
   "content_scripts": [
       {
-          "matches": ["<all_urls>"],
-          "js": ["js/vendor.js", "js/content_script.js"]
+          "matches": ["*://*.youtube.com/*"],
+          "js": ["js/vendor.js", "js/content_script.js"],
+          "css": ["content_script.css"],
+          "run_at": "document_idle"
       }
   ],
 
@@ -30,6 +32,6 @@
   ],
 
   "host_permissions": [
-    "<all_urls>"
+    "*://*.youtube.com/*"
   ]
 }
