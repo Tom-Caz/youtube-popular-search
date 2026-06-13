@@ -92,7 +92,7 @@ vi.mocked(fetchPopularVideos).mockResolvedValue([FAKE_VIDEO]);
 describe("content_script: clicking Latest/Oldest while a custom range is active", () => {
   it("clears the stale results panel and restores #contents when 'Latest' is clicked", async () => {
     // Select "This week" to get into a custom-range state.
-    popularButton().click();
+    popularButton().querySelector<HTMLElement>(".ytps-caret")!.click();
     const menu = document.querySelector(".ytps-menu")!;
     const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
       (el) => el.textContent === "This week"
@@ -116,6 +116,7 @@ describe("content_script: clicking Latest/Oldest while a custom range is active"
     expect(latestButton().getAttribute("aria-selected")).toBe("true");
     expect(popularButton().getAttribute("aria-selected")).toBe("false");
     expect(oldestButton().getAttribute("aria-selected")).toBe("false");
+    expect(popularButton().querySelector(".ytps-range")?.textContent).toBe("");
 
     // Clicking Latest must not re-trigger our custom fetch.
     expect(vi.mocked(fetchPopularVideos).mock.calls.length).toBe(fetchCountBefore);

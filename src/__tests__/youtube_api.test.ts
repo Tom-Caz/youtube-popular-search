@@ -28,12 +28,6 @@ afterEach(() => {
 describe("getPublishedAfter", () => {
   const now = new Date("2024-06-15T12:00:00.000Z");
 
-  test("today returns now minus 1 day", () => {
-    const expected = new Date(now);
-    expected.setDate(expected.getDate() - 1);
-    expect(getPublishedAfter("today", now)).toBe(expected.toISOString());
-  });
-
   test("week returns now minus 7 days", () => {
     const expected = new Date(now);
     expected.setDate(expected.getDate() - 7);

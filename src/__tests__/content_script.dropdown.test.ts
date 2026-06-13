@@ -57,6 +57,16 @@ function standalonePopularButton(): HTMLButtonElement {
   )!;
 }
 
+function caret(): HTMLElement {
+  return popularButton().querySelector<HTMLElement>(".ytps-caret")!;
+}
+
+function latestButton(): HTMLButtonElement {
+  return document.querySelector<HTMLButtonElement>(
+    'ytd-rich-grid-renderer button[aria-label="Latest"]'
+  )!;
+}
+
 describe("content_script: enhancement of the channel Popular chip", () => {
   it("enhances the channel sort chip's Popular button", () => {
     const button = popularButton();
@@ -67,7 +77,8 @@ describe("content_script: enhancement of the channel Popular chip", () => {
 
     const rangeSpan = button.querySelector(".ytps-range");
     expect(rangeSpan).not.toBeNull();
-    expect(rangeSpan?.textContent).toBe(" · All time");
+    // Popular isn't the active sort yet (Latest is), so no range is shown.
+    expect(rangeSpan?.textContent).toBe("");
 
     const caret = button.querySelector(".ytps-caret");
     expect(caret).not.toBeNull();
@@ -92,9 +103,9 @@ describe("content_script: dropdown menu interactions", () => {
     }
   });
 
-  it("clicking the Popular button opens a menu with 5 items, 'All time' selected", () => {
+  it("clicking the caret opens a menu with 4 items, 'All time' selected", () => {
     const button = popularButton();
-    button.click();
+    caret().click();
 
     expect(button.getAttribute("aria-expanded")).toBe("true");
 
@@ -104,7 +115,6 @@ describe("content_script: dropdown menu interactions", () => {
 
     const items = Array.from(menu!.querySelectorAll(".ytps-menu-item"));
     expect(items.map((el) => el.textContent)).toEqual([
-      "Today",
       "This week",
       "This month",
       "This year",
@@ -120,7 +130,7 @@ describe("content_script: dropdown menu interactions", () => {
 
   it("clicking outside the menu closes it", () => {
     const button = popularButton();
-    button.click();
+    caret().click();
     expect(document.querySelector(".ytps-menu")).not.toBeNull();
 
     document.body.click();
@@ -131,7 +141,7 @@ describe("content_script: dropdown menu interactions", () => {
 
   it("pressing Escape closes the menu", () => {
     const button = popularButton();
-    button.click();
+    caret().click();
     expect(document.querySelector(".ytps-menu")).not.toBeNull();
 
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
@@ -140,9 +150,9 @@ describe("content_script: dropdown menu interactions", () => {
     expect(button.getAttribute("aria-expanded")).toBe("false");
   });
 
-  it("clicking a menu item closes the menu and updates the chip label", () => {
+  it("clicking a menu item closes the menu, activates Popular, and updates the chip label", () => {
     const button = popularButton();
-    button.click();
+    caret().click();
 
     const menu = document.querySelector(".ytps-menu")!;
     const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
@@ -154,7 +164,34 @@ describe("content_script: dropdown menu interactions", () => {
     expect(document.querySelector(".ytps-menu")).toBeNull();
     expect(button.getAttribute("aria-expanded")).toBe("false");
 
+    expect(button.getAttribute("aria-selected")).toBe("true");
+
     const rangeSpan = button.querySelector(".ytps-range");
     expect(rangeSpan?.textContent).toBe(" · This week");
+  });
+
+  it("clicking the chip body (not the caret) re-applies the currently selected range", () => {
+    const button = popularButton();
+
+    // Pick "This week" via the dropdown first.
+    caret().click();
+    const menu = document.querySelector(".ytps-menu")!;
+    const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
+      (el) => el.textContent === "This week"
+    )!;
+    weekItem.click();
+
+    // Deactivate Popular by switching to "Latest".
+    latestButton().click();
+    expect(button.getAttribute("aria-selected")).toBe("false");
+    expect(button.querySelector(".ytps-range")?.textContent).toBe("");
+
+    // Clicking the chip body (not the caret) re-activates Popular with the
+    // same range, without opening the dropdown.
+    button.click();
+
+    expect(document.querySelector(".ytps-menu")).toBeNull();
+    expect(button.getAttribute("aria-selected")).toBe("true");
+    expect(button.querySelector(".ytps-range")?.textContent).toBe(" · This week");
   });
 });

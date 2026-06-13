@@ -52,10 +52,10 @@ describe("content_script: always starts at 'All time' (no cross-reload persisten
     await expect(import("../content_script")).resolves.toBeDefined();
   });
 
-  it("the Popular chip's range label is 'All time' immediately after import", () => {
+  it("the Popular chip's range label is empty immediately after import (Popular isn't active)", () => {
     const button = document.querySelector<HTMLButtonElement>('button[aria-label="Popular"]')!;
     const rangeSpan = button.querySelector(".ytps-range");
 
-    expect(rangeSpan?.textContent).toBe(" · All time");
+    expect(rangeSpan?.textContent).toBe("");
   });
 });

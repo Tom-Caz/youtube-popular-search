@@ -77,7 +77,7 @@ function contents(): HTMLElement {
 }
 
 function openMenuAndClick(label: string): void {
-  popularButton().click();
+  popularButton().querySelector<HTMLElement>(".ytps-caret")!.click();
   const menu = document.querySelector(".ytps-menu")!;
   const item = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
     (el) => el.textContent === label

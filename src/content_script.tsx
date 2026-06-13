@@ -15,7 +15,6 @@ interface TimeRange {
 }
 
 const TIME_RANGES: TimeRange[] = [
-  { id: "today", label: "Today" },
   { id: "week", label: "This week" },
   { id: "month", label: "This month" },
   { id: "year", label: "This year" },
@@ -81,14 +80,18 @@ function positionMenu(menu: HTMLElement, button: HTMLButtonElement): void {
   menu.style.left = `${rect.left}px`;
 }
 
+// The range suffix (e.g. "· This week") only makes sense while the Popular
+// chip is the active sort; otherwise it just reads "Popular" like the other
+// chips, with a dropdown to pick a range and activate it.
 function updateChipLabel(button: HTMLButtonElement): void {
   const rangeSpan = button.querySelector<HTMLSpanElement>(".ytps-range");
-  if (rangeSpan) rangeSpan.textContent = ` · ${rangeLabel(selectedRange)}`;
+  if (!rangeSpan) return;
+  rangeSpan.textContent =
+    button.getAttribute("aria-selected") === "true" ? ` · ${rangeLabel(selectedRange)}` : "";
 }
 
 function selectRange(button: HTMLButtonElement, rangeId: TimeRangeId): void {
   selectedRange = rangeId;
-  updateChipLabel(button);
   closeMenu();
   void applyRange(button, rangeId);
 }
@@ -143,6 +146,9 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
   const richGrid = button.closest("ytd-rich-grid-renderer");
   if (!richGrid) return;
 
+  setPopularActive(button);
+  updateChipLabel(button);
+
   if (rangeId === "all") {
     removeResultsPanel(richGrid);
     const contents = richGrid.querySelector<HTMLElement>("#contents");
@@ -153,8 +159,6 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
     button.click();
     return;
   }
-
-  setPopularActive(button);
 
   const contents = richGrid.querySelector<HTMLElement>("#contents");
   if (contents) contents.style.display = "none";
@@ -254,11 +258,11 @@ function enhancePopularChip(button: HTMLButtonElement): void {
 
   const rangeSpan = document.createElement("span");
   rangeSpan.className = "ytps-range";
-  rangeSpan.textContent = ` · ${rangeLabel(selectedRange)}`;
 
   const caret = document.createElement("span");
   caret.className = "ytps-caret";
   caret.setAttribute("aria-hidden", "true");
+  caret.setAttribute("title", "Choose a time range");
   caret.innerHTML =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">' +
     '<path d="M18.707 8.793a1 1 0 00-1.414 0L12 14.086 6.707 8.793a1 1 0 10-1.414 1.414L12 16.914l6.707-6.707a1 1 0 000-1.414Z"></path>' +
@@ -267,6 +271,10 @@ function enhancePopularChip(button: HTMLButtonElement): void {
   labelContainer.appendChild(rangeSpan);
   labelContainer.appendChild(caret);
 
+  updateChipLabel(button);
+
+  // The caret opens the range dropdown; the rest of the chip behaves like
+  // Latest/Oldest and immediately (re)applies the currently selected range.
   button.addEventListener(
     "click",
     (event) => {
@@ -276,7 +284,14 @@ function enhancePopularChip(button: HTMLButtonElement): void {
       }
       event.preventDefault();
       event.stopImmediatePropagation();
-      toggleMenu(button);
+
+      if (caret.contains(event.target as Node)) {
+        toggleMenu(button);
+        return;
+      }
+
+      closeMenu();
+      void applyRange(button, selectedRange);
     },
     true
   );
@@ -306,6 +321,8 @@ function enhanceSiblingChips(popularButton: HTMLButtonElement): void {
         bar?.querySelectorAll<HTMLElement>("button[aria-label]").forEach((chip) => {
           setChipActive(chip, chip === button);
         });
+
+        updateChipLabel(popularButton);
       });
     });
 }

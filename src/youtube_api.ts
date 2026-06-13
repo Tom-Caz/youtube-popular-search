@@ -1,4 +1,4 @@
-export type TimeRangeId = "today" | "week" | "month" | "year" | "all";
+export type TimeRangeId = "week" | "month" | "year" | "all";
 
 export type VideoKind = "videos" | "shorts";
 
@@ -109,9 +109,6 @@ export function getPublishedAfter(rangeId: TimeRangeId, now: Date = new Date()):
 
   const date = new Date(now);
   switch (rangeId) {
-    case "today":
-      date.setDate(date.getDate() - 1);
-      break;
     case "week":
       date.setDate(date.getDate() - 7);
       break;

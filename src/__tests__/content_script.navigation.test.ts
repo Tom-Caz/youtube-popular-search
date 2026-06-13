@@ -90,7 +90,7 @@ vi.mocked(getVideoKindFromUrl).mockImplementation(() =>
 );
 
 function selectThisWeek(): void {
-  popularButton().click();
+  popularButton().querySelector<HTMLElement>(".ytps-caret")!.click();
   const menu = document.querySelector(".ytps-menu")!;
   const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
     (el) => el.textContent === "This week"
@@ -141,7 +141,7 @@ describe("content_script: navigating away wipes the selected range", () => {
     document.dispatchEvent(new Event("yt-navigate-finish"));
 
     expect(popularButton().getAttribute("data-ytps-processed")).toBe("true");
-    expect(popularRangeLabel()).toBe(" · All time");
+    expect(popularRangeLabel()).toBe("");
     expect(richGrid().querySelector(".ytps-results")).toBeNull();
 
     // No additional fetch triggered by the reset/re-enhancement.
