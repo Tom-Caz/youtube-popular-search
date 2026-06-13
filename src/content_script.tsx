@@ -31,6 +31,11 @@ let currentMenu: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
 let bypassNextClick = false;
 
+// Tracks which page path a chip's results panel was last filled for, so
+// navigating to a different page (e.g. the channel's Shorts tab) refreshes
+// a still-visible panel instead of leaving the previous page's videos shown.
+const lastAppliedPath = new WeakMap<HTMLButtonElement, string>();
+
 function rangeLabel(id: TimeRangeId): string {
   return TIME_RANGES.find((range) => range.id === id)!.label;
 }
@@ -90,7 +95,29 @@ function selectRange(button: HTMLButtonElement, rangeId: TimeRangeId): void {
   selectedRange = rangeId;
   updateChipLabel(button);
   closeMenu();
+  lastAppliedPath.set(button, window.location.pathname);
   void applyRange(button, rangeId);
+}
+
+// If a results panel is still showing after navigating to a different page
+// (e.g. switching between a channel's Videos and Shorts tabs), refresh it
+// so it reflects the new page instead of the previous page's videos.
+function refreshStaleResultsPanels(): void {
+  if (selectedRange === DEFAULT_RANGE) return;
+
+  document.querySelectorAll<HTMLElement>(".ytps-results").forEach((panel) => {
+    const richGrid = panel.closest("ytd-rich-grid-renderer");
+    if (!richGrid) return;
+
+    const button = richGrid.querySelector<HTMLButtonElement>('button[aria-label="Popular"]');
+    if (!button || !isChannelSortChip(button)) return;
+
+    const path = window.location.pathname;
+    if (lastAppliedPath.get(button) === path) return;
+
+    lastAppliedPath.set(button, path);
+    void applyRange(button, selectedRange);
+  });
 }
 
 function setChipActive(chip: HTMLElement, active: boolean): void {
@@ -298,6 +325,8 @@ function scanForPopularChip(): void {
     enhancePopularChip(button);
     enhanceSiblingChips(button);
   });
+
+  refreshStaleResultsPanels();
 }
 
 function init(): void {
