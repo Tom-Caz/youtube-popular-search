@@ -3,6 +3,7 @@ import {
   standaloneChipBarHtml,
   mockCaretBoundingClientRect,
   clickCaret,
+  clickRangeText,
 } from "./content_script_fixtures";
 
 vi.mock("../youtube_api", () => ({
@@ -66,6 +67,10 @@ function standalonePopularButton(): HTMLButtonElement {
 
 function caret(): HTMLElement {
   return popularButton().querySelector<HTMLElement>(".ytps-caret")!;
+}
+
+function rangeSpan(): HTMLElement {
+  return popularButton().querySelector<HTMLElement>(".ytps-range")!;
 }
 
 function latestButton(): HTMLButtonElement {
@@ -133,6 +138,24 @@ describe("content_script: dropdown menu interactions", () => {
       expect(item.classList.contains("is-selected")).toBe(isAllTime);
       expect(item.getAttribute("aria-checked")).toBe(String(isAllTime));
     });
+  });
+
+  it("clicking the range text opens the dropdown menu instead of re-applying the range", () => {
+    const button = popularButton();
+
+    // Pick "This week" so the range text (e.g. "· This week") is rendered.
+    clickCaret(caret());
+    const menu = document.querySelector(".ytps-menu")!;
+    const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
+      (el) => el.textContent === "This week"
+    )!;
+    weekItem.click();
+    expect(document.querySelector(".ytps-menu")).toBeNull();
+
+    clickRangeText(rangeSpan());
+
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(document.querySelector(".ytps-menu")).not.toBeNull();
   });
 
   it("clicking outside the menu closes it", () => {

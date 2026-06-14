@@ -51,10 +51,27 @@ const CARET_RECT: DOMRect = {
   },
 };
 
+// Positioned left of the caret (e.g. where "· This week" renders) and
+// non-overlapping with it.
+const RANGE_RECT: DOMRect = {
+  x: 40,
+  y: 0,
+  left: 40,
+  top: 0,
+  right: 98,
+  bottom: 18,
+  width: 58,
+  height: 18,
+  toJSON() {
+    return this;
+  },
+};
+
 export function mockCaretBoundingClientRect(): void {
   const original = Element.prototype.getBoundingClientRect;
   Element.prototype.getBoundingClientRect = function (this: Element): DOMRect {
     if (this.classList.contains("ytps-caret")) return CARET_RECT;
+    if (this.classList.contains("ytps-range")) return RANGE_RECT;
     return original.call(this);
   };
 }
@@ -62,6 +79,11 @@ export function mockCaretBoundingClientRect(): void {
 // Dispatches a click at a point inside the caret's mocked bounding box.
 export function clickCaret(caret: Element): void {
   caret.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 109, clientY: 9 }));
+}
+
+// Dispatches a click at a point inside the range text's mocked bounding box.
+export function clickRangeText(rangeSpan: Element): void {
+  rangeSpan.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 69, clientY: 9 }));
 }
 
 export function standaloneChipBarHtml(): string {
