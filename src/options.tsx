@@ -102,6 +102,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#1a73e8",
     textDecoration: "none",
   },
+  footer: {
+    marginTop: 24,
+    fontSize: 12.5,
+    color: "#5f6368",
+  },
 };
 
 const Options = () => {
@@ -125,7 +130,7 @@ const Options = () => {
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.heading}>YouTube Popular Search</h1>
+      <h1 style={styles.heading}>Popular by Date for YouTube</h1>
       <p style={styles.intro}>
         Sorting a channel's videos by "Popular" for a specific time range (this week, this month,
         this year, or all time) requires a YouTube Data API v3 key. You can create one for free in
@@ -194,6 +199,21 @@ const Options = () => {
           101 units — roughly 100 lookups per day.
         </p>
       </div>
+
+      <p style={styles.footer}>
+        Your API key is stored locally in your browser (via Chrome sync storage) and is sent
+        directly to Google's YouTube Data API — never to any server run by this extension's
+        developer. See the{" "}
+        <a
+          href="https://github.com/Tom-Caz/youtube-popular-search/blob/main/PRIVACY.md"
+          target="_blank"
+          rel="noreferrer"
+          style={styles.link}
+        >
+          privacy policy
+        </a>{" "}
+        for details.
+      </p>
     </div>
   );
 };

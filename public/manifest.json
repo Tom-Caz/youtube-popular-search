@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
 
-  "name": "YouTube Popular Search",
+  "name": "Popular by Date for YouTube",
   "description": "Adds a time-range dropdown (This week/This month/This year/All time) to YouTube's Popular sort, like Reddit's sort menu.",
   "version": "0.1.0",
 
@@ -32,7 +32,6 @@
   ],
 
   "host_permissions": [
-    "*://*.youtube.com/*",
-    "https://www.googleapis.com/*"
+    "https://www.googleapis.com/youtube/v3/*"
   ]
 }

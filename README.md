@@ -1,4 +1,4 @@
-# YouTube Popular Search
+# Popular by Date for YouTube
 
 A Chrome extension that adds a time-range dropdown to the "Popular" sort chip on YouTube channel pages — similar to Reddit's sort menu.
 
@@ -33,11 +33,24 @@ npm run typecheck   # type-check with tsc
 
 Custom time ranges (This week / This month / This year) call the YouTube Data API v3, which requires your own free API key:
 
-1. Click the extension's icon and choose **Options** (or go to `chrome://extensions`, find "YouTube Popular Search", and click **Details → Extension options**).
+1. Click the extension's icon and choose **Options** (or go to `chrome://extensions`, find "Popular by Date for YouTube", and click **Details → Extension options**).
 2. Create an API key in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with the **YouTube Data API v3** enabled.
 3. Paste the key into the Options page and click **Save**.
 
 The free tier covers roughly 100 "Popular" lookups per day (each lookup uses about 101 of the default 10,000 daily quota units). "All time" doesn't require an API key.
+
+## Permissions
+
+- **`storage`** — saves your YouTube Data API key and is the only thing this extension persists.
+- **Host permission for `https://www.googleapis.com/youtube/v3/*`** — needed to call the YouTube
+  Data API (`search`, `videos`, and `channels` endpoints under `/youtube/v3/`) directly from the
+  browser using your API key.
+- **Content script on `*://*.youtube.com/*`** — adds the time-range dropdown to the "Popular"
+  chip and renders the results grid on channel pages. It only reads page content needed to
+  identify the current channel/tab and modifies the page's DOM; it does not read your YouTube
+  account, history, or any other personal data.
+
+See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
 
 ## Tech stack
 
