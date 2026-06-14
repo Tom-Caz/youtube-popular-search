@@ -1,6 +1,7 @@
-function polling() {
-  // console.log("polling");
-  setTimeout(polling, 1000 * 30);
-}
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === "OPEN_OPTIONS_PAGE") {
+    chrome.runtime.openOptionsPage();
+  }
+});
 
-polling();
+export {};

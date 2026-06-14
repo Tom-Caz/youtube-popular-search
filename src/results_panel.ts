@@ -27,6 +27,27 @@ export function renderStatus(panel: HTMLElement, message: string): void {
   panel.appendChild(status);
 }
 
+export function renderMissingApiKeyStatus(panel: HTMLElement, message: string): void {
+  panel.innerHTML = "";
+  const status = document.createElement("div");
+  status.className = "ytps-results-status";
+
+  const text = document.createElement("div");
+  text.textContent = message;
+  status.appendChild(text);
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "ytps-open-options-button";
+  button.textContent = "Open extension settings";
+  button.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: "OPEN_OPTIONS_PAGE" });
+  });
+  status.appendChild(button);
+
+  panel.appendChild(status);
+}
+
 export function renderVideos(panel: HTMLElement, videos: PopularVideo[]): void {
   panel.innerHTML = "";
   videos.forEach((video) => panel.appendChild(buildVideoCard(video)));

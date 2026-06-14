@@ -7,7 +7,13 @@ import {
   getVideoKindFromUrl,
   resolveChannelId,
 } from "./youtube_api";
-import { ensureResultsPanel, removeResultsPanel, renderStatus, renderVideos } from "./results_panel";
+import {
+  ensureResultsPanel,
+  removeResultsPanel,
+  renderMissingApiKeyStatus,
+  renderStatus,
+  renderVideos,
+} from "./results_panel";
 
 interface TimeRange {
   id: TimeRangeId;
@@ -168,7 +174,7 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
 
   const apiKey = await getApiKey();
   if (!apiKey) {
-    renderStatus(
+    renderMissingApiKeyStatus(
       panel,
       "Add a YouTube Data API key in the extension's options page to enable time-based Popular sorting."
     );

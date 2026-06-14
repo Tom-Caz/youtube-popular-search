@@ -139,6 +139,33 @@ html[dark] .ytps-results-status {
   color: #aaaaaa;
 }
 
+.ytps-open-options-button {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 18px;
+  background-color: #f2f2f2;
+  color: #0f0f0f;
+  font-family: "Roboto", "Arial", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ytps-open-options-button:hover {
+  background-color: #e5e5e5;
+}
+
+html[dark] .ytps-open-options-button {
+  background-color: #3f3f3f;
+  color: #f1f1f1;
+}
+
+html[dark] .ytps-open-options-button:hover {
+  background-color: #4f4f4f;
+}
+
 .ytps-video-card {
   display: flex;
   flex-direction: column;

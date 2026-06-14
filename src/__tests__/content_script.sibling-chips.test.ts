@@ -31,6 +31,7 @@ vi.mock("../results_panel", () => ({
     richGrid.querySelector(".ytps-results")?.remove();
   }),
   renderStatus: vi.fn(),
+  renderMissingApiKeyStatus: vi.fn(),
   renderVideos: vi.fn(),
 }));
 

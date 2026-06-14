@@ -2,6 +2,7 @@ import {
   ensureResultsPanel,
   removeResultsPanel,
   renderStatus,
+  renderMissingApiKeyStatus,
   renderVideos,
   formatViewCount,
   formatRelativeDate,
@@ -202,6 +203,43 @@ describe("renderStatus", () => {
     expect(panel.children.length).toBe(1);
     const status = panel.querySelector(".ytps-results-status");
     expect(status?.textContent).toBe("No results found");
+  });
+});
+
+describe("renderMissingApiKeyStatus", () => {
+  beforeEach(() => {
+    (globalThis as any).chrome = { runtime: { sendMessage: vi.fn() } };
+  });
+
+  afterEach(() => {
+    delete (globalThis as any).chrome;
+  });
+
+  it("clears prior content and renders the message with an 'Open extension settings' button", () => {
+    const panel = document.createElement("div");
+    panel.innerHTML = "<span>old content</span>";
+
+    renderMissingApiKeyStatus(panel, "Add a YouTube Data API key in the extension's options page.");
+
+    expect(panel.children.length).toBe(1);
+    const status = panel.querySelector(".ytps-results-status");
+    expect(status).not.toBeNull();
+    expect(status?.textContent).toContain("Add a YouTube Data API key in the extension's options page.");
+
+    const button = panel.querySelector<HTMLButtonElement>(".ytps-open-options-button");
+    expect(button).not.toBeNull();
+    expect(button?.textContent).toBe("Open extension settings");
+  });
+
+  it("sends an OPEN_OPTIONS_PAGE message to the background script when the button is clicked", () => {
+    const panel = document.createElement("div");
+
+    renderMissingApiKeyStatus(panel, "Add a YouTube Data API key in the extension's options page.");
+
+    const button = panel.querySelector<HTMLButtonElement>(".ytps-open-options-button")!;
+    button.click();
+
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: "OPEN_OPTIONS_PAGE" });
   });
 });
 

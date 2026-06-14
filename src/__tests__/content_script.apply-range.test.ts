@@ -31,6 +31,7 @@ vi.mock("../results_panel", () => ({
     richGrid.querySelector(".ytps-results")?.remove();
   }),
   renderStatus: vi.fn(),
+  renderMissingApiKeyStatus: vi.fn(),
   renderVideos: vi.fn(),
 }));
 
@@ -42,7 +43,7 @@ import {
   fetchPopularVideos,
   YouTubeApiError,
 } from "../youtube_api";
-import { renderStatus, renderVideos } from "../results_panel";
+import { renderStatus, renderMissingApiKeyStatus, renderVideos } from "../results_panel";
 
 document.body.innerHTML = richGridFixtureHtml();
 
@@ -100,6 +101,7 @@ beforeEach(() => {
   vi.mocked(resolveChannelId).mockReset();
   vi.mocked(fetchPopularVideos).mockReset();
   vi.mocked(renderStatus).mockClear();
+  vi.mocked(renderMissingApiKeyStatus).mockClear();
   vi.mocked(renderVideos).mockClear();
 
   // Sensible defaults; individual tests override as needed.
@@ -157,9 +159,9 @@ describe("content_script: selecting a custom range fetches and renders", () => {
 
     openMenuAndClick("This week");
 
-    await vi.waitFor(() => expect(renderStatus).toHaveBeenCalled());
+    await vi.waitFor(() => expect(renderMissingApiKeyStatus).toHaveBeenCalled());
 
-    const messages = vi.mocked(renderStatus).mock.calls.map((call) => call[1]);
+    const messages = vi.mocked(renderMissingApiKeyStatus).mock.calls.map((call) => call[1]);
     expect(messages.some((m) => /api key/i.test(m) && /options page/i.test(m))).toBe(true);
 
     expect(resolveChannelId).not.toHaveBeenCalled();
