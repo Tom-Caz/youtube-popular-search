@@ -114,6 +114,25 @@ beforeEach(() => {
 });
 
 describe("content_script: navigating away wipes the selected range", () => {
+  it("resets to 'All time' and restores #contents on yt-navigate-start, before the new tab's content loads", async () => {
+    selectThisWeek();
+
+    await vi.waitFor(() => expect(fetchPopularVideos).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(renderVideos).toHaveBeenCalledWith(expect.anything(), [FAKE_VIDEO]));
+
+    expect(contentsHidden()).toBe(true);
+
+    // yt-navigate-start fires as soon as the user clicks the Shorts tab,
+    // before YouTube's transition (and #contents repopulation) begins. We
+    // must restore #contents here, not just on yt-navigate-finish, so it's
+    // visible for YouTube's repopulation during the transition itself.
+    document.dispatchEvent(new Event("yt-navigate-start"));
+
+    expect(popularRangeLabel()).toBe(" · All time");
+    expect(richGrid().querySelector(".ytps-results")).toBeNull();
+    expect(contentsHidden()).toBe(false);
+  });
+
   it("resets to 'All time' and removes the results panel when switching from Videos to Shorts", async () => {
     selectThisWeek();
 
@@ -126,6 +145,7 @@ describe("content_script: navigating away wipes the selected range", () => {
 
     // Navigate to the Shorts tab (the chip bar/rich grid are reused).
     window.history.pushState({}, "", "/@SomeChannel/shorts");
+    document.dispatchEvent(new Event("yt-navigate-start"));
     document.dispatchEvent(new Event("yt-navigate-finish"));
 
     expect(popularRangeLabel()).toBe(" · All time");
@@ -152,6 +172,7 @@ describe("content_script: navigating away wipes the selected range", () => {
 
     // Navigate to the Shorts tab before the "This week" fetch resolves.
     window.history.pushState({}, "", "/@SomeChannel/shorts");
+    document.dispatchEvent(new Event("yt-navigate-start"));
     document.dispatchEvent(new Event("yt-navigate-finish"));
 
     expect(popularRangeLabel()).toBe(" · All time");
@@ -178,6 +199,7 @@ describe("content_script: navigating away wipes the selected range", () => {
 
     // Navigate away to a brand new channel's videos page (fresh chip-bar DOM).
     window.history.pushState({}, "", "/@AnotherChannel/videos");
+    document.dispatchEvent(new Event("yt-navigate-start"));
     document.body.innerHTML = richGridFixtureHtml();
     document.dispatchEvent(new Event("yt-navigate-finish"));
 

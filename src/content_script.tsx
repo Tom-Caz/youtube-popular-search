@@ -451,6 +451,20 @@ function init(): void {
   const observer = new MutationObserver(() => scanForPopularChip());
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
+  // YouTube decides whether to (re)populate #contents for the destination
+  // tab during the navigation transition itself, not after it finishes — if
+  // #contents is still hidden at that point (left over from a custom range),
+  // it skips repopulating it even once we un-hide it on yt-navigate-finish.
+  // Resetting as early as yt-navigate-start gives it the whole transition
+  // window with #contents visible.
+  document.addEventListener("yt-navigate-start", () => {
+    closeMenu();
+    // Invalidate any in-flight fetch so a late response from the previous
+    // page/tab can't render its results here.
+    requestGeneration++;
+    resetSelectedRange();
+  });
+
   document.addEventListener("yt-navigate-finish", () => {
     closeMenu();
     // Invalidate any in-flight fetch so a late response from the previous
