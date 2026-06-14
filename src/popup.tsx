@@ -1,51 +1,22 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 
 const Popup = () => {
-  const [count, setCount] = useState(0);
-  const [currentURL, setCurrentURL] = useState<string>();
-
-  useEffect(() => {
-    chrome.action.setBadgeText({ text: count.toString() });
-  }, [count]);
-
-  useEffect(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      setCurrentURL(tabs[0].url);
-    });
-  }, []);
-
-  const changeBackground = () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      const tab = tabs[0];
-      if (tab.id) {
-        chrome.tabs.sendMessage(
-          tab.id,
-          {
-            color: "#555555",
-          },
-          (msg) => {
-            console.log("result message:", msg);
-          }
-        );
-      }
-    });
+  const openOptions = () => {
+    chrome.runtime.openOptionsPage();
   };
 
   return (
-    <>
-      <ul style={{ minWidth: "700px" }}>
-        <li>Current URL: {currentURL}</li>
-        <li>Current Time: {new Date().toLocaleTimeString()}</li>
-      </ul>
-      <button
-        onClick={() => setCount(count + 1)}
-        style={{ marginRight: "5px" }}
-      >
-        count up
+    <div style={{ fontFamily: "Roboto, Arial, sans-serif", width: 260, padding: 16 }}>
+      <h2 style={{ marginTop: 0, marginBottom: 8, fontSize: 16 }}>YouTube Popular Search</h2>
+      <p style={{ marginTop: 0, marginBottom: 12, fontSize: 13, color: "#606060" }}>
+        Adds a time-range dropdown (This week/This month/This year/All time) to YouTube's
+        "Popular" sort on channel pages. Add a YouTube Data API key in settings to enable it.
+      </p>
+      <button onClick={openOptions} style={{ width: "100%", padding: 8 }}>
+        Open Settings
       </button>
-      <button onClick={changeBackground}>change background</button>
-    </>
+    </div>
   );
 };
 
