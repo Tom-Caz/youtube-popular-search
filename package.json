@@ -1,20 +1,19 @@
 {
-  "name": "chrome-extension-typescript-starter",
-  "version": "1.0.0",
-  "description": "chrome-extension-typescript-starter",
-  "main": "index.js",
+  "name": "youtube-popular-search",
+  "version": "0.1.0",
+  "description": "Chrome extension that adds a time-range dropdown to YouTube's Popular sort.",
   "scripts": {
     "watch": "webpack --config webpack/webpack.dev.js --watch",
     "build": "webpack --config webpack/webpack.prod.js",
     "clean": "rimraf dist",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit -p src/__tests__/tsconfig.json",
     "style": "prettier --write \"src/**/*.{ts,tsx}\""
   },
-  "author": "",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chibat/chrome-extension-typescript-starter.git"
+    "url": "https://github.com/Tom-Caz/youtube-popular-search.git"
   },
   "dependencies": {
     "react": "^18.2.0",

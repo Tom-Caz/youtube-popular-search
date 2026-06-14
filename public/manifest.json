@@ -2,7 +2,7 @@
   "manifest_version": 3,
 
   "name": "YouTube Popular Search",
-  "description": "Adds a time-range dropdown (Today/Week/Month/Year/All time) to YouTube's Popular sort, like Reddit's sort menu.",
+  "description": "Adds a time-range dropdown (This week/This month/This year/All time) to YouTube's Popular sort, like Reddit's sort menu.",
   "version": "0.1.0",
 
   "options_ui": {
