@@ -2,6 +2,10 @@ export type TimeRangeId = "week" | "month" | "year" | "all";
 
 export type VideoKind = "videos" | "shorts";
 
+// YouTube's channel grid is 4 columns wide; a multiple of 4 (and at most the
+// API's max of 50) keeps each page a whole number of rows.
+const MAX_RESULTS = 48;
+
 // YouTube Shorts are at most 3 minutes long; everything longer is a regular video.
 const SHORTS_MAX_DURATION_SECONDS = 183;
 
@@ -164,7 +168,7 @@ export async function fetchPopularVideos(
   publishedAfter: string | null,
   videoKind: VideoKind,
   pageToken?: string,
-  maxResults = 50
+  maxResults = MAX_RESULTS
 ): Promise<FetchPopularVideosResult> {
   const searchParams = new URLSearchParams({
     part: "snippet",
