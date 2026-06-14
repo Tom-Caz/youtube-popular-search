@@ -52,6 +52,14 @@ The free tier covers roughly 100 "Popular" lookups per day (each lookup uses abo
 
 See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
 
+## Development / Contributing
+
+Feel free to make PRs and Issue reports for this repo. 
+
+Be warned -- This project was entirely vibe-coded in a single evening. I can't speak to the quality of the code beyond breifly glancing at it before commiting.
+
+This was created to solve a need of mine. I am publishing it to share with anyone else who has a similar need.
+
 ## Tech stack
 
 TypeScript, React, Webpack, and Vitest.
