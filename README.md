@@ -15,7 +15,7 @@ On a channel's Videos or Shorts tab, next to the "Latest" / "Popular" / "Oldest"
 ## Development
 
 ```bash
-npm install        # install dependencies
+npm install         # install dependencies
 npm run build       # production build to dist/
 npm run watch       # development build, rebuilds on file changes
 npm test            # run the test suite (Vitest)
