@@ -43,6 +43,10 @@ The free tier covers roughly 100 "Popular" lookups per day (each lookup uses abo
 
 TypeScript, React, Webpack, and Vitest.
 
+## Template
+
+Based on the [chrome-extension-typescript-starter](https://github.com/chibat/chrome-extension-typescript-starter) template by [chibat](https://github.com/chibat)
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
