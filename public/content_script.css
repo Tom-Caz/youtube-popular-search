@@ -111,6 +111,14 @@ html[dark] .ytps-menu-item.is-selected {
   color: #fff;
 }
 
+/* Hides #contents while .ytps-results is shown, without `display: none` —
+   see the comment on CONTENTS_HIDDEN_CLASS in content_script.tsx for why. */
+.ytps-contents-hidden {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .ytps-results {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

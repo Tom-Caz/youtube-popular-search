@@ -81,6 +81,10 @@ function contents(): HTMLElement {
   return richGrid().querySelector<HTMLElement>("#contents")!;
 }
 
+function contentsHidden(): boolean {
+  return contents().classList.contains("ytps-contents-hidden");
+}
+
 const FAKE_VIDEO: PopularVideo = {
   videoId: "vid1",
   title: "Fake Video",
@@ -108,7 +112,7 @@ describe("content_script: clicking Latest/Oldest while a custom range is active"
     await vi.waitFor(() => expect(renderVideos).toHaveBeenCalledWith(expect.anything(), [FAKE_VIDEO]));
 
     expect(richGrid().querySelector(".ytps-results")).not.toBeNull();
-    expect(contents().style.display).toBe("none");
+    expect(contentsHidden()).toBe(true);
     expect(popularButton().getAttribute("aria-selected")).toBe("true");
 
     const fetchCountBefore = vi.mocked(fetchPopularVideos).mock.calls.length;
@@ -117,7 +121,7 @@ describe("content_script: clicking Latest/Oldest while a custom range is active"
     latestButton().click();
 
     expect(richGrid().querySelector(".ytps-results")).toBeNull();
-    expect(contents().style.display).toBe("");
+    expect(contentsHidden()).toBe(false);
 
     expect(latestButton().getAttribute("aria-selected")).toBe("true");
     expect(popularButton().getAttribute("aria-selected")).toBe("false");

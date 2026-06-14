@@ -36,6 +36,21 @@ const DEFAULT_RANGE: TimeRangeId = "all";
 const PROCESSED_ATTR = "data-ytps-processed";
 const SIBLING_PROCESSED_ATTR = "data-ytps-sibling-processed";
 
+// Hides #contents while our results panel is shown. Uses visibility+position
+// rather than `display: none` so YouTube's own visibility/intersection
+// checks still see it as live and keep its content up to date for the next
+// time the user switches tabs back to it (display: none made YouTube skip
+// repopulating it, leaving stale videos behind after a tab switch).
+const CONTENTS_HIDDEN_CLASS = "ytps-contents-hidden";
+
+function hideContents(richGrid: Element): void {
+  richGrid.querySelector<HTMLElement>("#contents")?.classList.add(CONTENTS_HIDDEN_CLASS);
+}
+
+function showContents(richGrid: Element): void {
+  richGrid.querySelector<HTMLElement>("#contents")?.classList.remove(CONTENTS_HIDDEN_CLASS);
+}
+
 let selectedRange: TimeRangeId = DEFAULT_RANGE;
 let currentMenu: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
@@ -130,8 +145,7 @@ function resetSelectedRange(): void {
       if (!richGrid) return;
 
       removeResultsPanel(richGrid);
-      const contents = richGrid.querySelector<HTMLElement>("#contents");
-      if (contents) contents.style.display = "";
+      showContents(richGrid);
     });
 }
 
@@ -173,8 +187,7 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
 
   if (rangeId === "all") {
     removeResultsPanel(richGrid);
-    const contents = richGrid.querySelector<HTMLElement>("#contents");
-    if (contents) contents.style.display = "";
+    showContents(richGrid);
 
     // Trigger YouTube's native "Popular" sort (its closest equivalent is all-time view count).
     bypassNextClick = true;
@@ -182,8 +195,7 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
     return;
   }
 
-  const contents = richGrid.querySelector<HTMLElement>("#contents");
-  if (contents) contents.style.display = "none";
+  hideContents(richGrid);
 
   const panel = ensureResultsPanel(richGrid);
   renderStatus(panel, "Loading popular videos…");
@@ -409,8 +421,7 @@ function enhanceSiblingChips(popularButton: HTMLButtonElement): void {
         if (!richGrid) return;
 
         removeResultsPanel(richGrid);
-        const contents = richGrid.querySelector<HTMLElement>("#contents");
-        if (contents) contents.style.display = "";
+        showContents(richGrid);
 
         const bar = button.closest("chip-bar-view-model");
         bar?.querySelectorAll<HTMLElement>("button[aria-label]").forEach((chip) => {

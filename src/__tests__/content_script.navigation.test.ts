@@ -79,6 +79,10 @@ function contents(): HTMLElement {
   return richGrid().querySelector<HTMLElement>("#contents")!;
 }
 
+function contentsHidden(): boolean {
+  return contents().classList.contains("ytps-contents-hidden");
+}
+
 const FAKE_VIDEO: PopularVideo = {
   videoId: "vid1",
   title: "Fake Video",
@@ -118,7 +122,7 @@ describe("content_script: navigating away wipes the selected range", () => {
 
     expect(popularRangeLabel()).toBe(" · This week");
     expect(richGrid().querySelector(".ytps-results")).not.toBeNull();
-    expect(contents().style.display).toBe("none");
+    expect(contentsHidden()).toBe(true);
 
     // Navigate to the Shorts tab (the chip bar/rich grid are reused).
     window.history.pushState({}, "", "/@SomeChannel/shorts");
@@ -126,7 +130,7 @@ describe("content_script: navigating away wipes the selected range", () => {
 
     expect(popularRangeLabel()).toBe(" · All time");
     expect(richGrid().querySelector(".ytps-results")).toBeNull();
-    expect(contents().style.display).toBe("");
+    expect(contentsHidden()).toBe(false);
 
     // Wiping the range on navigation must not trigger a refetch.
     await new Promise((r) => setTimeout(r, 0));
@@ -144,7 +148,7 @@ describe("content_script: navigating away wipes the selected range", () => {
     selectThisWeek();
 
     await vi.waitFor(() => expect(fetchPopularVideos).toHaveBeenCalledTimes(1));
-    expect(contents().style.display).toBe("none");
+    expect(contentsHidden()).toBe(true);
 
     // Navigate to the Shorts tab before the "This week" fetch resolves.
     window.history.pushState({}, "", "/@SomeChannel/shorts");
@@ -152,7 +156,7 @@ describe("content_script: navigating away wipes the selected range", () => {
 
     expect(popularRangeLabel()).toBe(" · All time");
     expect(richGrid().querySelector(".ytps-results")).toBeNull();
-    expect(contents().style.display).toBe("");
+    expect(contentsHidden()).toBe(false);
 
     // The stale "Videos" fetch resolves after navigating to Shorts — its
     // results must not render on top of the reset state.
@@ -161,7 +165,7 @@ describe("content_script: navigating away wipes the selected range", () => {
 
     expect(renderVideos).not.toHaveBeenCalled();
     expect(richGrid().querySelector(".ytps-results")).toBeNull();
-    expect(contents().style.display).toBe("");
+    expect(contentsHidden()).toBe(false);
   });
 
   it("does not carry a custom range over to a different channel", async () => {

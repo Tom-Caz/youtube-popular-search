@@ -90,6 +90,10 @@ function contents(): HTMLElement {
   return richGrid().querySelector<HTMLElement>("#contents")!;
 }
 
+function contentsHidden(): boolean {
+  return contents().classList.contains("ytps-contents-hidden");
+}
+
 function openMenuAndClick(label: string): void {
   clickCaret(popularButton().querySelector<HTMLElement>(".ytps-caret")!);
   const menu = document.querySelector(".ytps-menu")!;
@@ -140,7 +144,7 @@ describe("content_script: selecting a custom range fetches and renders", () => {
   it("hides #contents, shows loading status, fetches, and renders results", async () => {
     openMenuAndClick("This week");
 
-    expect(contents().style.display).toBe("none");
+    expect(contentsHidden()).toBe(true);
     expect(renderStatus).toHaveBeenCalledWith(expect.anything(), "Loading popular videos…");
 
     await vi.waitFor(() => expect(fetchPopularVideos).toHaveBeenCalled());
@@ -241,14 +245,14 @@ describe("content_script: selecting a custom range fetches and renders", () => {
     // First select "This week" to get into a custom-range state.
     openMenuAndClick("This week");
     await vi.waitFor(() => expect(renderVideos).toHaveBeenCalledWith(expect.anything(), [FAKE_VIDEO]));
-    expect(contents().style.display).toBe("none");
+    expect(contentsHidden()).toBe(true);
     expect(richGrid().querySelector(".ytps-results")).not.toBeNull();
 
     // Now select "All time" again.
     openMenuAndClick("All time");
 
     expect(richGrid().querySelector(".ytps-results")).toBeNull();
-    expect(contents().style.display).toBe("");
+    expect(contentsHidden()).toBe(false);
 
     // The native click should have fired without our menu reopening.
     expect(document.querySelector(".ytps-menu")).toBeNull();
