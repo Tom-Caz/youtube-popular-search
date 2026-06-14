@@ -1,0 +1,12 @@
+{
+  "background": {
+    "scripts": ["js/background.js"]
+  },
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "popular-by-date-for-youtube@tom-caz.github.io",
+      "strict_min_version": "109.0"
+    }
+  }
+}
