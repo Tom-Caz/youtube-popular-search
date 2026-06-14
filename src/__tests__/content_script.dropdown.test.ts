@@ -4,6 +4,7 @@ import {
   mockCaretBoundingClientRect,
   clickCaret,
   clickRangeText,
+  clickTrailingPadding,
 } from "./content_script_fixtures";
 
 vi.mock("../youtube_api", () => ({
@@ -153,6 +154,15 @@ describe("content_script: dropdown menu interactions", () => {
     expect(document.querySelector(".ytps-menu")).toBeNull();
 
     clickRangeText(rangeSpan());
+
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(document.querySelector(".ytps-menu")).not.toBeNull();
+  });
+
+  it("clicking the chip's trailing padding (past the caret) opens the dropdown menu", () => {
+    const button = popularButton();
+
+    clickTrailingPadding(button);
 
     expect(button.getAttribute("aria-expanded")).toBe("true");
     expect(document.querySelector(".ytps-menu")).not.toBeNull();

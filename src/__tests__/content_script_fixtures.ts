@@ -67,11 +67,28 @@ const RANGE_RECT: DOMRect = {
   },
 };
 
+// The chip itself, extending past the caret's right edge (118) to cover the
+// chip's trailing padding (e.g. where empty space after the caret renders).
+const BUTTON_RECT: DOMRect = {
+  x: 0,
+  y: 0,
+  left: 0,
+  top: 0,
+  right: 140,
+  bottom: 18,
+  width: 140,
+  height: 18,
+  toJSON() {
+    return this;
+  },
+};
+
 export function mockCaretBoundingClientRect(): void {
   const original = Element.prototype.getBoundingClientRect;
   Element.prototype.getBoundingClientRect = function (this: Element): DOMRect {
     if (this.classList.contains("ytps-caret")) return CARET_RECT;
     if (this.classList.contains("ytps-range")) return RANGE_RECT;
+    if (this instanceof HTMLButtonElement) return BUTTON_RECT;
     return original.call(this);
   };
 }
@@ -84,6 +101,12 @@ export function clickCaret(caret: Element): void {
 // Dispatches a click at a point inside the range text's mocked bounding box.
 export function clickRangeText(rangeSpan: Element): void {
   rangeSpan.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 69, clientY: 9 }));
+}
+
+// Dispatches a click at a point in the chip's trailing padding, past the
+// caret's right edge but still within the chip's mocked bounding box.
+export function clickTrailingPadding(button: Element): void {
+  button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 130, clientY: 9 }));
 }
 
 export function standaloneChipBarHtml(): string {

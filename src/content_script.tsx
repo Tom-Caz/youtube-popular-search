@@ -338,21 +338,26 @@ function enhancePopularChip(button: HTMLButtonElement): void {
 
       // YouTube renders a touch-feedback overlay on top of the whole chip, so
       // event.target is always that overlay, never our caret/range elements.
-      // Detect a click on either by comparing the click position to their
-      // rendered bounding boxes instead.
-      const clickedWithin = (element: Element): boolean => {
-        const rect = element.getBoundingClientRect();
-        return (
-          rect.width > 0 &&
-          rect.height > 0 &&
-          event.clientX >= rect.left &&
-          event.clientX <= rect.right &&
-          event.clientY >= rect.top &&
-          event.clientY <= rect.bottom
-        );
-      };
+      // Detect a click on the dropdown trigger by comparing the click
+      // position to the chip's layout instead. The trigger zone spans from
+      // the start of the range text/caret to the chip's right edge (covering
+      // its trailing padding too), so users don't have to hit the small text
+      // or icon exactly.
+      const caretRect = caret.getBoundingClientRect();
+      const rangeRect = rangeSpan.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
 
-      if (clickedWithin(caret) || clickedWithin(rangeSpan)) {
+      const triggerLeft = rangeRect.width > 0 ? Math.min(rangeRect.left, caretRect.left) : caretRect.left;
+
+      const clickedTrigger =
+        buttonRect.width > 0 &&
+        buttonRect.height > 0 &&
+        event.clientX >= triggerLeft &&
+        event.clientX <= buttonRect.right &&
+        event.clientY >= buttonRect.top &&
+        event.clientY <= buttonRect.bottom;
+
+      if (clickedTrigger) {
         toggleMenu(button);
         return;
       }
