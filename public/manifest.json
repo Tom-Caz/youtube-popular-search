@@ -3,7 +3,7 @@
 
   "name": "Popular by Date for YouTube",
   "description": "Adds a time-range dropdown (This week/This month/This year/All time) to YouTube's Popular sort, like Reddit's sort menu.",
-  "version": "0.1.0",
+  "version": "0.1.1",
 
   "options_ui": {
     "page": "options.html"
