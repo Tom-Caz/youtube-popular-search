@@ -133,6 +133,37 @@ describe("content_script: navigating away wipes the selected range", () => {
     expect(fetchPopularVideos).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores a stale fetch response if the user navigates away before it resolves", async () => {
+    let resolveFetch: (result: { videos: PopularVideo[]; nextPageToken: string | null }) => void;
+    vi.mocked(fetchPopularVideos).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFetch = resolve;
+      })
+    );
+
+    selectThisWeek();
+
+    await vi.waitFor(() => expect(fetchPopularVideos).toHaveBeenCalledTimes(1));
+    expect(contents().style.display).toBe("none");
+
+    // Navigate to the Shorts tab before the "This week" fetch resolves.
+    window.history.pushState({}, "", "/@SomeChannel/shorts");
+    document.dispatchEvent(new Event("yt-navigate-finish"));
+
+    expect(popularRangeLabel()).toBe(" · All time");
+    expect(richGrid().querySelector(".ytps-results")).toBeNull();
+    expect(contents().style.display).toBe("");
+
+    // The stale "Videos" fetch resolves after navigating to Shorts — its
+    // results must not render on top of the reset state.
+    resolveFetch!({ videos: [FAKE_VIDEO], nextPageToken: null });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(renderVideos).not.toHaveBeenCalled();
+    expect(richGrid().querySelector(".ytps-results")).toBeNull();
+    expect(contents().style.display).toBe("");
+  });
+
   it("does not carry a custom range over to a different channel", async () => {
     selectThisWeek();
 

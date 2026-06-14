@@ -41,6 +41,11 @@ let currentMenu: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
 let bypassNextClick = false;
 
+// Bumped whenever the current request is no longer relevant (range changed,
+// sort changed, or the user navigated away/switched tabs) so a late-arriving
+// fetch response can detect it's stale and avoid rendering into the page.
+let requestGeneration = 0;
+
 function rangeLabel(id: TimeRangeId): string {
   return TIME_RANGES.find((range) => range.id === id)!.label;
 }
@@ -110,9 +115,10 @@ function selectRange(button: HTMLButtonElement, rangeId: TimeRangeId): void {
 // Leaving the current page for any reason (navigating home, to a different
 // channel, or switching between a channel's Videos and Shorts tabs) wipes a
 // non-default range back to "All time" so it never carries over to wherever
-// the user navigates next.
+// the user navigates next. Always runs the full cleanup (even if the range
+// was already "All time"), since a results panel/hidden #contents can be
+// left over from a stale request that hadn't rendered yet.
 function resetSelectedRange(): void {
-  if (selectedRange === DEFAULT_RANGE) return;
   selectedRange = DEFAULT_RANGE;
 
   document
@@ -157,6 +163,11 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
   const richGrid = button.closest("ytd-rich-grid-renderer");
   if (!richGrid) return;
 
+  // Invalidate any in-flight request from a previous range/tab so its
+  // results can't land here after this one starts (e.g. switching ranges or
+  // tabs mid-fetch shouldn't let the stale fetch's videos render).
+  const generation = ++requestGeneration;
+
   setPopularActive(button);
   updateChipLabel(button);
 
@@ -178,6 +189,7 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
   renderStatus(panel, "Loading popular videos…");
 
   const apiKey = await getApiKey();
+  if (generation !== requestGeneration) return;
   if (!apiKey) {
     renderMissingApiKeyStatus(
       panel,
@@ -187,6 +199,7 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
   }
 
   const channelId = await resolveChannelId(apiKey);
+  if (generation !== requestGeneration) return;
   if (!channelId) {
     renderStatus(panel, "Couldn't determine the channel for this page.");
     return;
@@ -196,15 +209,17 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
     const publishedAfter = getPublishedAfter(rangeId);
     const videoKind = getVideoKindFromUrl();
     const result = await fetchPopularVideos(channelId, apiKey, publishedAfter, videoKind);
+    if (generation !== requestGeneration) return;
     if (result.videos.length === 0) {
       renderStatus(panel, `No videos found for "${rangeLabel(rangeId)}".`);
     } else {
       renderVideos(panel, result.videos);
       if (result.nextPageToken) {
-        showLoadMore(panel, channelId, apiKey, publishedAfter, videoKind, result.nextPageToken);
+        showLoadMore(panel, channelId, apiKey, publishedAfter, videoKind, result.nextPageToken, generation);
       }
     }
   } catch (error) {
+    if (generation !== requestGeneration) return;
     renderStatus(panel, describeFetchError(error));
   }
 }
@@ -215,10 +230,11 @@ function showLoadMore(
   apiKey: string,
   publishedAfter: string | null,
   videoKind: VideoKind,
-  pageToken: string
+  pageToken: string,
+  generation: number
 ): void {
   renderLoadMoreButton(panel, () => {
-    void loadMoreVideos(panel, channelId, apiKey, publishedAfter, videoKind, pageToken);
+    void loadMoreVideos(panel, channelId, apiKey, publishedAfter, videoKind, pageToken, generation);
   });
 }
 
@@ -228,19 +244,22 @@ async function loadMoreVideos(
   apiKey: string,
   publishedAfter: string | null,
   videoKind: VideoKind,
-  pageToken: string
+  pageToken: string,
+  generation: number
 ): Promise<void> {
   setLoadMoreButtonState(panel, "loading");
 
   try {
     const result = await fetchPopularVideos(channelId, apiKey, publishedAfter, videoKind, pageToken);
+    if (generation !== requestGeneration) return;
     appendVideos(panel, result.videos);
     if (result.nextPageToken) {
-      showLoadMore(panel, channelId, apiKey, publishedAfter, videoKind, result.nextPageToken);
+      showLoadMore(panel, channelId, apiKey, publishedAfter, videoKind, result.nextPageToken, generation);
     } else {
       removeLoadMoreButton(panel);
     }
   } catch {
+    if (generation !== requestGeneration) return;
     setLoadMoreButtonState(panel, "error");
   }
 }
@@ -382,6 +401,10 @@ function enhanceSiblingChips(popularButton: HTMLButtonElement): void {
       button.setAttribute(SIBLING_PROCESSED_ATTR, "true");
 
       button.addEventListener("click", () => {
+        // Invalidate any in-flight Popular fetch so it can't render its
+        // results after the user has switched to Latest/Oldest.
+        requestGeneration++;
+
         const richGrid = button.closest("ytd-rich-grid-renderer");
         if (!richGrid) return;
 
@@ -419,6 +442,9 @@ function init(): void {
 
   document.addEventListener("yt-navigate-finish", () => {
     closeMenu();
+    // Invalidate any in-flight fetch so a late response from the previous
+    // page/tab can't render its results here.
+    requestGeneration++;
     resetSelectedRange();
     scanForPopularChip();
   });
