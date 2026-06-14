@@ -1,4 +1,9 @@
-import { richGridFixtureHtml, standaloneChipBarHtml } from "./content_script_fixtures";
+import {
+  richGridFixtureHtml,
+  standaloneChipBarHtml,
+  mockCaretBoundingClientRect,
+  clickCaret,
+} from "./content_script_fixtures";
 
 vi.mock("../youtube_api", () => ({
   getApiKey: vi.fn(),
@@ -35,6 +40,7 @@ vi.mock("../results_panel", () => ({
 }));
 
 document.body.innerHTML = richGridFixtureHtml() + standaloneChipBarHtml();
+mockCaretBoundingClientRect();
 
 await import("../content_script");
 
@@ -106,7 +112,7 @@ describe("content_script: dropdown menu interactions", () => {
 
   it("clicking the caret opens a menu with 4 items, 'All time' selected", () => {
     const button = popularButton();
-    caret().click();
+    clickCaret(caret());
 
     expect(button.getAttribute("aria-expanded")).toBe("true");
 
@@ -131,7 +137,7 @@ describe("content_script: dropdown menu interactions", () => {
 
   it("clicking outside the menu closes it", () => {
     const button = popularButton();
-    caret().click();
+    clickCaret(caret());
     expect(document.querySelector(".ytps-menu")).not.toBeNull();
 
     document.body.click();
@@ -142,7 +148,7 @@ describe("content_script: dropdown menu interactions", () => {
 
   it("pressing Escape closes the menu", () => {
     const button = popularButton();
-    caret().click();
+    clickCaret(caret());
     expect(document.querySelector(".ytps-menu")).not.toBeNull();
 
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
@@ -153,7 +159,7 @@ describe("content_script: dropdown menu interactions", () => {
 
   it("clicking a menu item closes the menu, activates Popular, and updates the chip label", () => {
     const button = popularButton();
-    caret().click();
+    clickCaret(caret());
 
     const menu = document.querySelector(".ytps-menu")!;
     const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
@@ -175,7 +181,7 @@ describe("content_script: dropdown menu interactions", () => {
     const button = popularButton();
 
     // Pick "This week" via the dropdown first.
-    caret().click();
+    clickCaret(caret());
     const menu = document.querySelector(".ytps-menu")!;
     const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
       (el) => el.textContent === "This week"

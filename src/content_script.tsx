@@ -291,7 +291,18 @@ function enhancePopularChip(button: HTMLButtonElement): void {
       event.preventDefault();
       event.stopImmediatePropagation();
 
-      if (caret.contains(event.target as Node)) {
+      // YouTube renders a touch-feedback overlay on top of the whole chip, so
+      // event.target is always that overlay, never our caret element. Detect
+      // a caret click by comparing the click position to the caret's
+      // rendered bounding box instead.
+      const caretRect = caret.getBoundingClientRect();
+      const clickedCaret =
+        event.clientX >= caretRect.left &&
+        event.clientX <= caretRect.right &&
+        event.clientY >= caretRect.top &&
+        event.clientY <= caretRect.bottom;
+
+      if (clickedCaret) {
         toggleMenu(button);
         return;
       }

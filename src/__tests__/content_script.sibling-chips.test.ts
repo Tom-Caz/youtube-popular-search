@@ -1,4 +1,4 @@
-import { richGridFixtureHtml } from "./content_script_fixtures";
+import { richGridFixtureHtml, mockCaretBoundingClientRect, clickCaret } from "./content_script_fixtures";
 import type { PopularVideo } from "../youtube_api";
 
 vi.mock("../youtube_api", () => ({
@@ -45,6 +45,7 @@ import {
 import { renderVideos } from "../results_panel";
 
 document.body.innerHTML = richGridFixtureHtml();
+mockCaretBoundingClientRect();
 
 await import("../content_script");
 
@@ -93,7 +94,7 @@ vi.mocked(fetchPopularVideos).mockResolvedValue([FAKE_VIDEO]);
 describe("content_script: clicking Latest/Oldest while a custom range is active", () => {
   it("clears the stale results panel and restores #contents when 'Latest' is clicked", async () => {
     // Select "This week" to get into a custom-range state.
-    popularButton().querySelector<HTMLElement>(".ytps-caret")!.click();
+    clickCaret(popularButton().querySelector<HTMLElement>(".ytps-caret")!);
     const menu = document.querySelector(".ytps-menu")!;
     const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
       (el) => el.textContent === "This week"

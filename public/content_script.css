@@ -13,10 +13,6 @@
   height: 18px;
   vertical-align: middle;
   border-radius: 50%;
-  /* The chip label's icon/text are normally pointer-events: none (clicks
-     fall through to the button itself); re-enable hit-testing here so the
-     caret can act as its own click target, separate from the chip body. */
-  pointer-events: auto;
   cursor: pointer;
 }
 

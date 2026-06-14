@@ -1,4 +1,4 @@
-import { richGridFixtureHtml } from "./content_script_fixtures";
+import { richGridFixtureHtml, mockCaretBoundingClientRect, clickCaret } from "./content_script_fixtures";
 import type { PopularVideo } from "../youtube_api";
 
 vi.mock("../youtube_api", () => ({
@@ -46,6 +46,7 @@ import {
 import { renderStatus, renderMissingApiKeyStatus, renderVideos } from "../results_panel";
 
 document.body.innerHTML = richGridFixtureHtml();
+mockCaretBoundingClientRect();
 
 await import("../content_script");
 
@@ -78,7 +79,7 @@ function contents(): HTMLElement {
 }
 
 function openMenuAndClick(label: string): void {
-  popularButton().querySelector<HTMLElement>(".ytps-caret")!.click();
+  clickCaret(popularButton().querySelector<HTMLElement>(".ytps-caret")!);
   const menu = document.querySelector(".ytps-menu")!;
   const item = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
     (el) => el.textContent === label

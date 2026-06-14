@@ -1,4 +1,4 @@
-import { richGridFixtureHtml } from "./content_script_fixtures";
+import { richGridFixtureHtml, mockCaretBoundingClientRect, clickCaret } from "./content_script_fixtures";
 import type { PopularVideo } from "../youtube_api";
 
 vi.mock("../youtube_api", () => ({
@@ -47,6 +47,7 @@ import { renderVideos } from "../results_panel";
 window.history.pushState({}, "", "/@SomeChannel/videos");
 
 document.body.innerHTML = richGridFixtureHtml();
+mockCaretBoundingClientRect();
 
 await import("../content_script");
 
@@ -91,7 +92,7 @@ vi.mocked(getVideoKindFromUrl).mockImplementation(() =>
 );
 
 function selectThisWeek(): void {
-  popularButton().querySelector<HTMLElement>(".ytps-caret")!.click();
+  clickCaret(popularButton().querySelector<HTMLElement>(".ytps-caret")!);
   const menu = document.querySelector(".ytps-menu")!;
   const weekItem = Array.from(menu.querySelectorAll<HTMLElement>(".ytps-menu-item")).find(
     (el) => el.textContent === "This week"

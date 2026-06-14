@@ -30,6 +30,40 @@ export function richGridFixtureHtml(): string {
   `;
 }
 
+// In real YouTube, a touch-feedback overlay always becomes event.target for
+// clicks anywhere on the chip, so content_script.tsx distinguishes a caret
+// click from a chip-body click by comparing the click's coordinates to the
+// caret's getBoundingClientRect() rather than event.target. jsdom doesn't
+// compute real layout (every element's rect is all zeros), so give
+// .ytps-caret a fixed, non-zero rect and dispatch clicks at a point inside
+// vs. outside it.
+const CARET_RECT: DOMRect = {
+  x: 100,
+  y: 0,
+  left: 100,
+  top: 0,
+  right: 118,
+  bottom: 18,
+  width: 18,
+  height: 18,
+  toJSON() {
+    return this;
+  },
+};
+
+export function mockCaretBoundingClientRect(): void {
+  const original = Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect = function (this: Element): DOMRect {
+    if (this.classList.contains("ytps-caret")) return CARET_RECT;
+    return original.call(this);
+  };
+}
+
+// Dispatches a click at a point inside the caret's mocked bounding box.
+export function clickCaret(caret: Element): void {
+  caret.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 109, clientY: 9 }));
+}
+
 export function standaloneChipBarHtml(): string {
   return `
     <chip-bar-view-model id="unrelated-chip-bar">
