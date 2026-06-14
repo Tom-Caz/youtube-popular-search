@@ -1,6 +1,6 @@
 # Popular by Date for YouTube
 
-A Chrome extension that adds a time-range dropdown to the "Popular" sort chip on YouTube channel pages — similar to Reddit's sort menu.
+A Chrome and Firefox extension that adds a time-range dropdown to the "Popular" sort chip on YouTube channel pages — similar to Reddit's sort menu.
 
 On a channel's Videos or Shorts tab, next to the "Latest" / "Popular" / "Oldest" chips, this extension adds a small caret to the "Popular" chip. Clicking the caret opens a menu with **This week**, **This month**, **This year**, and **All time**. Picking a range fetches that channel's most-viewed videos for the period via the YouTube Data API and renders them as a grid in place of YouTube's normal results (matching whichever tab — Videos or Shorts — you're on). Picking "All time" just triggers YouTube's native "Popular" (most-viewed) sort. Clicking the chip's body re-applies whichever range you last selected.
 
@@ -15,11 +15,13 @@ On a channel's Videos or Shorts tab, next to the "Latest" / "Popular" / "Oldest"
 ## Development
 
 ```bash
-npm install         # install dependencies
-npm run build       # production build to dist/
-npm run watch       # development build, rebuilds on file changes
-npm test            # run the test suite (Vitest)
-npm run typecheck   # type-check with tsc
+npm install            # install dependencies
+npm run build          # production build to dist/ (Chrome)
+npm run watch          # development build for Chrome, rebuilds on file changes
+npm run build:firefox  # production build to dist-firefox/ (Firefox/Zen)
+npm run watch:firefox  # development build for Firefox, rebuilds on file changes
+npm test               # run the test suite (Vitest)
+npm run typecheck      # type-check with tsc
 ```
 
 ## Loading the extension in Chrome
@@ -28,6 +30,24 @@ npm run typecheck   # type-check with tsc
 2. Open `chrome://extensions`.
 3. Enable **Developer mode** (top right).
 4. Click **Load unpacked** and select the `dist/` folder.
+
+## Loading the extension in Firefox / Zen
+
+Firefox needs its own build because Manifest V3's background page differs (Chrome uses a
+`service_worker`, Firefox uses a background script) and Firefox requires an explicit add-on ID
+for `storage.sync`. These differences live in `public/manifest.firefox.json`, which is merged
+into `public/manifest.json` for the Firefox build.
+
+1. Run `npm run build:firefox` (or `npm run watch:firefox` for development) to generate the
+   `dist-firefox/` folder.
+2. Open `about:debugging#/runtime/this-firefox` (in Zen, this is the same `about:debugging` page
+   as Firefox).
+3. Click **Load Temporary Add-on…** and select `dist-firefox/manifest.json`.
+
+Temporary add-ons are removed when the browser restarts, so you'll need to reload it each
+session during development. The rest of the extension's code is shared as-is between Chrome and
+Firefox — Firefox implements the `chrome.*` APIs (`storage`, `runtime`, etc.) this extension uses
+as a compatibility layer, so no source changes are needed beyond the manifest.
 
 ## Setting up a YouTube Data API key
 
