@@ -4,6 +4,10 @@ import {
   renderStatus,
   renderMissingApiKeyStatus,
   renderVideos,
+  appendVideos,
+  renderLoadMoreButton,
+  removeLoadMoreButton,
+  setLoadMoreButtonState,
   formatViewCount,
   formatRelativeDate,
 } from "../results_panel";
@@ -305,5 +309,117 @@ describe("renderVideos", () => {
 
     expect(panel.querySelector(".ytps-results-status")).toBeNull();
     expect(panel.querySelectorAll(".ytps-video-card").length).toBe(1);
+  });
+});
+
+describe("appendVideos", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("adds more cards after the existing ones without clearing them", () => {
+    const panel = document.createElement("div");
+    renderVideos(panel, [makeVideo({ videoId: "vid1" })]);
+
+    appendVideos(panel, [makeVideo({ videoId: "vid2" }), makeVideo({ videoId: "vid3" })]);
+
+    const cards = panel.querySelectorAll<HTMLAnchorElement>(".ytps-video-card");
+    expect(cards.length).toBe(3);
+    expect(Array.from(cards).map((card) => card.getAttribute("href"))).toEqual([
+      "/watch?v=vid1",
+      "/watch?v=vid2",
+      "/watch?v=vid3",
+    ]);
+  });
+
+  it("inserts new cards before an existing Load more button", () => {
+    const panel = document.createElement("div");
+    renderVideos(panel, [makeVideo({ videoId: "vid1" })]);
+    renderLoadMoreButton(panel, () => {});
+
+    appendVideos(panel, [makeVideo({ videoId: "vid2" })]);
+
+    const children = Array.from(panel.children);
+    const loadMoreIndex = children.findIndex((el) => el.classList.contains("ytps-load-more"));
+    const newCardIndex = children.findIndex(
+      (el) => el.classList.contains("ytps-video-card") && el.getAttribute("href") === "/watch?v=vid2"
+    );
+
+    expect(newCardIndex).toBeGreaterThanOrEqual(0);
+    expect(loadMoreIndex).toBeGreaterThan(newCardIndex);
+  });
+});
+
+describe("renderLoadMoreButton / removeLoadMoreButton / setLoadMoreButtonState", () => {
+  it("renders a button that invokes the given callback when clicked", () => {
+    const panel = document.createElement("div");
+    const onClick = vi.fn();
+
+    renderLoadMoreButton(panel, onClick);
+
+    const button = panel.querySelector<HTMLButtonElement>(".ytps-load-more-button")!;
+    expect(button).not.toBeNull();
+    expect(button.textContent).toBe("Load more");
+
+    button.click();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("replaces a previously rendered Load more button rather than stacking them", () => {
+    const panel = document.createElement("div");
+
+    renderLoadMoreButton(panel, () => {});
+    renderLoadMoreButton(panel, () => {});
+
+    expect(panel.querySelectorAll(".ytps-load-more").length).toBe(1);
+  });
+
+  it("removeLoadMoreButton removes the button from the panel", () => {
+    const panel = document.createElement("div");
+    renderLoadMoreButton(panel, () => {});
+
+    removeLoadMoreButton(panel);
+
+    expect(panel.querySelector(".ytps-load-more")).toBeNull();
+  });
+
+  it("removeLoadMoreButton is a no-op when there is no button", () => {
+    const panel = document.createElement("div");
+
+    expect(() => removeLoadMoreButton(panel)).not.toThrow();
+  });
+
+  it("setLoadMoreButtonState('loading') disables the button and updates its text", () => {
+    const panel = document.createElement("div");
+    renderLoadMoreButton(panel, () => {});
+
+    setLoadMoreButtonState(panel, "loading");
+
+    const button = panel.querySelector<HTMLButtonElement>(".ytps-load-more-button")!;
+    expect(button.disabled).toBe(true);
+    expect(button.textContent).toBe("Loading…");
+  });
+
+  it("setLoadMoreButtonState('error') re-enables the button and shows a retry message", () => {
+    const panel = document.createElement("div");
+    renderLoadMoreButton(panel, () => {});
+
+    setLoadMoreButtonState(panel, "loading");
+    setLoadMoreButtonState(panel, "error");
+
+    const button = panel.querySelector<HTMLButtonElement>(".ytps-load-more-button")!;
+    expect(button.disabled).toBe(false);
+    expect(button.textContent).toMatch(/try again/i);
+  });
+
+  it("setLoadMoreButtonState is a no-op when there is no button", () => {
+    const panel = document.createElement("div");
+
+    expect(() => setLoadMoreButtonState(panel, "loading")).not.toThrow();
   });
 });

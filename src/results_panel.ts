@@ -53,6 +53,53 @@ export function renderVideos(panel: HTMLElement, videos: PopularVideo[]): void {
   videos.forEach((video) => panel.appendChild(buildVideoCard(video)));
 }
 
+// Adds more video cards to a panel that already has results, without
+// disturbing the existing cards or (if present) the "Load more" button.
+export function appendVideos(panel: HTMLElement, videos: PopularVideo[]): void {
+  const loadMore = panel.querySelector(".ytps-load-more");
+  const fragment = document.createDocumentFragment();
+  videos.forEach((video) => fragment.appendChild(buildVideoCard(video)));
+
+  if (loadMore) {
+    panel.insertBefore(fragment, loadMore);
+  } else {
+    panel.appendChild(fragment);
+  }
+}
+
+export function renderLoadMoreButton(panel: HTMLElement, onClick: () => void): void {
+  removeLoadMoreButton(panel);
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "ytps-load-more";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "ytps-load-more-button";
+  button.textContent = "Load more";
+  button.addEventListener("click", onClick);
+
+  wrapper.appendChild(button);
+  panel.appendChild(wrapper);
+}
+
+export function removeLoadMoreButton(panel: HTMLElement): void {
+  panel.querySelector(".ytps-load-more")?.remove();
+}
+
+export function setLoadMoreButtonState(panel: HTMLElement, state: "loading" | "error"): void {
+  const button = panel.querySelector<HTMLButtonElement>(".ytps-load-more-button");
+  if (!button) return;
+
+  if (state === "loading") {
+    button.disabled = true;
+    button.textContent = "Loading…";
+  } else {
+    button.disabled = false;
+    button.textContent = "Couldn't load more — try again";
+  }
+}
+
 function buildVideoCard(video: PopularVideo): HTMLElement {
   const card = document.createElement("a");
   card.className = "ytps-video-card";

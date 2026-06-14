@@ -33,6 +33,10 @@ vi.mock("../results_panel", () => ({
   renderStatus: vi.fn(),
   renderMissingApiKeyStatus: vi.fn(),
   renderVideos: vi.fn(),
+  appendVideos: vi.fn(),
+  renderLoadMoreButton: vi.fn(),
+  removeLoadMoreButton: vi.fn(),
+  setLoadMoreButtonState: vi.fn(),
 }));
 
 import {
@@ -43,7 +47,15 @@ import {
   fetchPopularVideos,
   YouTubeApiError,
 } from "../youtube_api";
-import { renderStatus, renderMissingApiKeyStatus, renderVideos } from "../results_panel";
+import {
+  renderStatus,
+  renderMissingApiKeyStatus,
+  renderVideos,
+  renderLoadMoreButton,
+  appendVideos,
+  removeLoadMoreButton,
+  setLoadMoreButtonState,
+} from "../results_panel";
 
 document.body.innerHTML = richGridFixtureHtml();
 mockCaretBoundingClientRect();
@@ -104,13 +116,17 @@ beforeEach(() => {
   vi.mocked(renderStatus).mockClear();
   vi.mocked(renderMissingApiKeyStatus).mockClear();
   vi.mocked(renderVideos).mockClear();
+  vi.mocked(appendVideos).mockClear();
+  vi.mocked(renderLoadMoreButton).mockClear();
+  vi.mocked(removeLoadMoreButton).mockClear();
+  vi.mocked(setLoadMoreButtonState).mockClear();
 
   // Sensible defaults; individual tests override as needed.
   vi.mocked(getApiKey).mockResolvedValue("FAKE_KEY");
   vi.mocked(resolveChannelId).mockResolvedValue("UCabc123");
   vi.mocked(getPublishedAfter).mockReturnValue("2024-01-01T00:00:00.000Z");
   vi.mocked(getVideoKindFromUrl).mockReturnValue("videos");
-  vi.mocked(fetchPopularVideos).mockResolvedValue([FAKE_VIDEO]);
+  vi.mocked(fetchPopularVideos).mockResolvedValue({ videos: [FAKE_VIDEO], nextPageToken: null });
 });
 
 afterEach(() => {
@@ -185,7 +201,7 @@ describe("content_script: selecting a custom range fetches and renders", () => {
   });
 
   it("shows a 'no videos found' message mentioning the range label when results are empty", async () => {
-    vi.mocked(fetchPopularVideos).mockResolvedValue([]);
+    vi.mocked(fetchPopularVideos).mockResolvedValue({ videos: [], nextPageToken: null });
 
     openMenuAndClick("This week");
 
@@ -236,5 +252,101 @@ describe("content_script: selecting a custom range fetches and renders", () => {
 
     // The native click should have fired without our menu reopening.
     expect(document.querySelector(".ytps-menu")).toBeNull();
+  });
+});
+
+describe("content_script: Load more pagination", () => {
+  it("shows a Load more button when fetchPopularVideos returns a nextPageToken", async () => {
+    vi.mocked(fetchPopularVideos).mockResolvedValue({ videos: [FAKE_VIDEO], nextPageToken: "PAGE_2" });
+
+    openMenuAndClick("This week");
+
+    await vi.waitFor(() => expect(renderVideos).toHaveBeenCalledWith(expect.anything(), [FAKE_VIDEO]));
+
+    expect(renderLoadMoreButton).toHaveBeenCalledWith(expect.anything(), expect.any(Function));
+  });
+
+  it("does not show a Load more button when nextPageToken is null", async () => {
+    openMenuAndClick("This week");
+
+    await vi.waitFor(() => expect(renderVideos).toHaveBeenCalledWith(expect.anything(), [FAKE_VIDEO]));
+
+    expect(renderLoadMoreButton).not.toHaveBeenCalled();
+  });
+
+  it("clicking Load more fetches the next page with the token and appends the results", async () => {
+    const PAGE_2_VIDEO: PopularVideo = { ...FAKE_VIDEO, videoId: "vid2", title: "Page 2 Video" };
+    vi.mocked(fetchPopularVideos).mockResolvedValueOnce({ videos: [FAKE_VIDEO], nextPageToken: "PAGE_2" });
+
+    openMenuAndClick("This week");
+
+    await vi.waitFor(() => expect(renderLoadMoreButton).toHaveBeenCalled());
+    const loadMore = vi.mocked(renderLoadMoreButton).mock.calls[0][1];
+
+    vi.mocked(fetchPopularVideos).mockResolvedValueOnce({ videos: [PAGE_2_VIDEO], nextPageToken: null });
+    loadMore();
+
+    expect(setLoadMoreButtonState).toHaveBeenCalledWith(expect.anything(), "loading");
+
+    await vi.waitFor(() =>
+      expect(fetchPopularVideos).toHaveBeenCalledWith(
+        "UCabc123",
+        "FAKE_KEY",
+        "2024-01-01T00:00:00.000Z",
+        "videos",
+        "PAGE_2"
+      )
+    );
+
+    await vi.waitFor(() => expect(appendVideos).toHaveBeenCalledWith(expect.anything(), [PAGE_2_VIDEO]));
+
+    // No further pages, so the button is removed instead of re-rendered.
+    expect(removeLoadMoreButton).toHaveBeenCalled();
+    expect(renderLoadMoreButton).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-renders the Load more button with the new token when another page follows", async () => {
+    vi.mocked(fetchPopularVideos).mockResolvedValueOnce({ videos: [FAKE_VIDEO], nextPageToken: "PAGE_2" });
+
+    openMenuAndClick("This week");
+
+    await vi.waitFor(() => expect(renderLoadMoreButton).toHaveBeenCalledTimes(1));
+    const loadMore = vi.mocked(renderLoadMoreButton).mock.calls[0][1];
+
+    vi.mocked(fetchPopularVideos).mockResolvedValueOnce({ videos: [FAKE_VIDEO], nextPageToken: "PAGE_3" });
+    loadMore();
+
+    await vi.waitFor(() => expect(renderLoadMoreButton).toHaveBeenCalledTimes(2));
+    expect(removeLoadMoreButton).not.toHaveBeenCalled();
+
+    const loadMoreAgain = vi.mocked(renderLoadMoreButton).mock.calls[1][1];
+    vi.mocked(fetchPopularVideos).mockResolvedValueOnce({ videos: [], nextPageToken: null });
+    loadMoreAgain();
+
+    await vi.waitFor(() =>
+      expect(fetchPopularVideos).toHaveBeenCalledWith(
+        "UCabc123",
+        "FAKE_KEY",
+        "2024-01-01T00:00:00.000Z",
+        "videos",
+        "PAGE_3"
+      )
+    );
+  });
+
+  it("shows an error state on the Load more button when the next page fetch fails", async () => {
+    vi.mocked(fetchPopularVideos).mockResolvedValueOnce({ videos: [FAKE_VIDEO], nextPageToken: "PAGE_2" });
+
+    openMenuAndClick("This week");
+
+    await vi.waitFor(() => expect(renderLoadMoreButton).toHaveBeenCalled());
+    const loadMore = vi.mocked(renderLoadMoreButton).mock.calls[0][1];
+
+    vi.mocked(fetchPopularVideos).mockRejectedValueOnce(new Error("network down"));
+    loadMore();
+
+    await vi.waitFor(() => expect(setLoadMoreButtonState).toHaveBeenCalledWith(expect.anything(), "error"));
+    expect(appendVideos).not.toHaveBeenCalled();
+    expect(removeLoadMoreButton).not.toHaveBeenCalled();
   });
 });

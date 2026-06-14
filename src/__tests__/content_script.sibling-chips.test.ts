@@ -33,6 +33,10 @@ vi.mock("../results_panel", () => ({
   renderStatus: vi.fn(),
   renderMissingApiKeyStatus: vi.fn(),
   renderVideos: vi.fn(),
+  appendVideos: vi.fn(),
+  renderLoadMoreButton: vi.fn(),
+  removeLoadMoreButton: vi.fn(),
+  setLoadMoreButtonState: vi.fn(),
 }));
 
 import {
@@ -89,7 +93,7 @@ vi.mocked(getApiKey).mockResolvedValue("FAKE_KEY");
 vi.mocked(resolveChannelId).mockResolvedValue("UCabc123");
 vi.mocked(getPublishedAfter).mockReturnValue("2024-01-01T00:00:00.000Z");
 vi.mocked(getVideoKindFromUrl).mockReturnValue("videos");
-vi.mocked(fetchPopularVideos).mockResolvedValue([FAKE_VIDEO]);
+vi.mocked(fetchPopularVideos).mockResolvedValue({ videos: [FAKE_VIDEO], nextPageToken: null });
 
 describe("content_script: clicking Latest/Oldest while a custom range is active", () => {
   it("clears the stale results panel and restores #contents when 'Latest' is clicked", async () => {

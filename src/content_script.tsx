@@ -1,5 +1,6 @@
 import {
   TimeRangeId,
+  VideoKind,
   YouTubeApiError,
   fetchPopularVideos,
   getApiKey,
@@ -8,11 +9,15 @@ import {
   resolveChannelId,
 } from "./youtube_api";
 import {
+  appendVideos,
   ensureResultsPanel,
+  removeLoadMoreButton,
   removeResultsPanel,
+  renderLoadMoreButton,
   renderMissingApiKeyStatus,
   renderStatus,
   renderVideos,
+  setLoadMoreButtonState,
 } from "./results_panel";
 
 interface TimeRange {
@@ -189,14 +194,54 @@ async function applyRange(button: HTMLButtonElement, rangeId: TimeRangeId): Prom
 
   try {
     const publishedAfter = getPublishedAfter(rangeId);
-    const videos = await fetchPopularVideos(channelId, apiKey, publishedAfter, getVideoKindFromUrl());
-    if (videos.length === 0) {
+    const videoKind = getVideoKindFromUrl();
+    const result = await fetchPopularVideos(channelId, apiKey, publishedAfter, videoKind);
+    if (result.videos.length === 0) {
       renderStatus(panel, `No videos found for "${rangeLabel(rangeId)}".`);
     } else {
-      renderVideos(panel, videos);
+      renderVideos(panel, result.videos);
+      if (result.nextPageToken) {
+        showLoadMore(panel, channelId, apiKey, publishedAfter, videoKind, result.nextPageToken);
+      }
     }
   } catch (error) {
     renderStatus(panel, describeFetchError(error));
+  }
+}
+
+function showLoadMore(
+  panel: HTMLElement,
+  channelId: string,
+  apiKey: string,
+  publishedAfter: string | null,
+  videoKind: VideoKind,
+  pageToken: string
+): void {
+  renderLoadMoreButton(panel, () => {
+    void loadMoreVideos(panel, channelId, apiKey, publishedAfter, videoKind, pageToken);
+  });
+}
+
+async function loadMoreVideos(
+  panel: HTMLElement,
+  channelId: string,
+  apiKey: string,
+  publishedAfter: string | null,
+  videoKind: VideoKind,
+  pageToken: string
+): Promise<void> {
+  setLoadMoreButtonState(panel, "loading");
+
+  try {
+    const result = await fetchPopularVideos(channelId, apiKey, publishedAfter, videoKind, pageToken);
+    appendVideos(panel, result.videos);
+    if (result.nextPageToken) {
+      showLoadMore(panel, channelId, apiKey, publishedAfter, videoKind, result.nextPageToken);
+    } else {
+      removeLoadMoreButton(panel);
+    }
+  } catch {
+    setLoadMoreButtonState(panel, "error");
   }
 }
 

@@ -266,15 +266,18 @@ describe("fetchPopularVideos", () => {
 
     const result = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
 
-    expect(result).toEqual([
-      {
-        videoId: "vid1",
-        title: "My Video",
-        thumbnailUrl: "https://example.com/medium.jpg",
-        publishedAt: "2024-03-01T00:00:00.000Z",
-        viewCount: 12345,
-      },
-    ]);
+    expect(result).toEqual({
+      videos: [
+        {
+          videoId: "vid1",
+          title: "My Video",
+          thumbnailUrl: "https://example.com/medium.jpg",
+          publishedAt: "2024-03-01T00:00:00.000Z",
+          viewCount: 12345,
+        },
+      ],
+      nextPageToken: null,
+    });
   });
 
   test("falls back to default thumbnail when medium thumbnail is absent", async () => {
@@ -304,7 +307,7 @@ describe("fetchPopularVideos", () => {
 
     const result = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
 
-    expect(result[0].thumbnailUrl).toBe("https://example.com/default.jpg");
+    expect(result.videos[0].thumbnailUrl).toBe("https://example.com/default.jpg");
   });
 
   test("excludes a 3-minute (180s) video when videoKind is videos", async () => {
@@ -329,7 +332,7 @@ describe("fetchPopularVideos", () => {
     );
 
     const result = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
-    expect(result).toEqual([]);
+    expect(result.videos).toEqual([]);
   });
 
   test("includes a 3m4s (184s) video when videoKind is videos", async () => {
@@ -354,8 +357,8 @@ describe("fetchPopularVideos", () => {
     );
 
     const result = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
-    expect(result).toHaveLength(1);
-    expect(result[0].videoId).toBe("longVid");
+    expect(result.videos).toHaveLength(1);
+    expect(result.videos[0].videoId).toBe("longVid");
   });
 
   test("includes a 3-minute (180s) video when videoKind is shorts", async () => {
@@ -380,8 +383,8 @@ describe("fetchPopularVideos", () => {
     );
 
     const result = await fetchPopularVideos("UCchannel", "api-key", null, "shorts");
-    expect(result).toHaveLength(1);
-    expect(result[0].videoId).toBe("shortVid");
+    expect(result.videos).toHaveLength(1);
+    expect(result.videos[0].videoId).toBe("shortVid");
   });
 
   test("excludes a 3m4s (184s) video when videoKind is shorts", async () => {
@@ -406,7 +409,7 @@ describe("fetchPopularVideos", () => {
     );
 
     const result = await fetchPopularVideos("UCchannel", "api-key", null, "shorts");
-    expect(result).toEqual([]);
+    expect(result.videos).toEqual([]);
   });
 
   test("a 3m3s (183s) video counts as a Short at the exact boundary", async () => {
@@ -430,13 +433,13 @@ describe("fetchPopularVideos", () => {
 
     mockFetchWith(baseSearch, baseVideos);
     const shortsResult = await fetchPopularVideos("UCchannel", "api-key", null, "shorts");
-    expect(shortsResult).toHaveLength(1);
-    expect(shortsResult[0].videoId).toBe("boundaryVid");
+    expect(shortsResult.videos).toHaveLength(1);
+    expect(shortsResult.videos[0].videoId).toBe("boundaryVid");
 
     vi.restoreAllMocks();
     mockFetchWith(baseSearch, baseVideos);
     const videosResult = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
-    expect(videosResult).toEqual([]);
+    expect(videosResult.videos).toEqual([]);
   });
 
   test("a video missing from the statistics response is treated as a regular video", async () => {
@@ -452,25 +455,88 @@ describe("fetchPopularVideos", () => {
 
     mockFetchWith(search, videos);
     const videosResult = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
-    expect(videosResult).toHaveLength(1);
-    expect(videosResult[0].videoId).toBe("deletedVid");
-    expect(videosResult[0].viewCount).toBe(0);
+    expect(videosResult.videos).toHaveLength(1);
+    expect(videosResult.videos[0].videoId).toBe("deletedVid");
+    expect(videosResult.videos[0].viewCount).toBe(0);
 
     vi.restoreAllMocks();
     mockFetchWith(search, videos);
     const shortsResult = await fetchPopularVideos("UCchannel", "api-key", null, "shorts");
-    expect(shortsResult).toEqual([]);
+    expect(shortsResult.videos).toEqual([]);
   });
 
-  test("returns [] without calling the videos endpoint when search has no items", async () => {
+  test("returns no videos without calling the videos endpoint when search has no items", async () => {
     const fetchSpy = mockFetchWith({ items: [] });
 
     const result = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
 
-    expect(result).toEqual([]);
+    expect(result).toEqual({ videos: [], nextPageToken: null });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const calledUrl = fetchSpy.mock.calls[0][0] as string;
     expect(calledUrl).toContain("/search?");
+  });
+
+  test("includes pageToken in the search URL when provided", async () => {
+    const fetchSpy = mockFetchWith({ items: [] });
+
+    await fetchPopularVideos("UCchannel", "api-key", null, "videos", "PAGE_TOKEN_2");
+
+    const searchUrl = fetchSpy.mock.calls[0][0] as string;
+    expect(searchUrl).toContain("pageToken=PAGE_TOKEN_2");
+  });
+
+  test("omits pageToken from the search URL when not provided", async () => {
+    const fetchSpy = mockFetchWith({ items: [] });
+
+    await fetchPopularVideos("UCchannel", "api-key", null, "videos");
+
+    const searchUrl = fetchSpy.mock.calls[0][0] as string;
+    expect(searchUrl).not.toContain("pageToken=");
+  });
+
+  test("returns the search response's nextPageToken alongside videos", async () => {
+    mockFetchWith(
+      {
+        items: [
+          {
+            id: { videoId: "vid1" },
+            snippet: { title: "Video", publishedAt: "2024-01-01T00:00:00.000Z" },
+          },
+        ],
+        nextPageToken: "PAGE_TOKEN_2",
+      },
+      {
+        items: [
+          { id: "vid1", statistics: { viewCount: "1" }, contentDetails: { duration: "PT10M" } },
+        ],
+      }
+    );
+
+    const result = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
+
+    expect(result.nextPageToken).toBe("PAGE_TOKEN_2");
+  });
+
+  test("returns null nextPageToken when the search response has no nextPageToken", async () => {
+    mockFetchWith(
+      {
+        items: [
+          {
+            id: { videoId: "vid1" },
+            snippet: { title: "Video", publishedAt: "2024-01-01T00:00:00.000Z" },
+          },
+        ],
+      },
+      {
+        items: [
+          { id: "vid1", statistics: { viewCount: "1" }, contentDetails: { duration: "PT10M" } },
+        ],
+      }
+    );
+
+    const result = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
+
+    expect(result.nextPageToken).toBeNull();
   });
 
   test("throws YouTubeApiError with status and message from a JSON error body", async () => {

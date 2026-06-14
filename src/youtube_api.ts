@@ -146,6 +146,13 @@ async function fetchJson(url: string): Promise<any> {
   return response.json();
 }
 
+export interface FetchPopularVideosResult {
+  videos: PopularVideo[];
+  // Pass to a subsequent call to fetch the next page of results; null when
+  // there are no more results.
+  nextPageToken: string | null;
+}
+
 /**
  * Finds the channel's most-viewed videos published after the given date,
  * using the YouTube Data API v3 (search.list ordered by viewCount, then
@@ -156,8 +163,9 @@ export async function fetchPopularVideos(
   apiKey: string,
   publishedAfter: string | null,
   videoKind: VideoKind,
+  pageToken?: string,
   maxResults = 50
-): Promise<PopularVideo[]> {
+): Promise<FetchPopularVideosResult> {
   const searchParams = new URLSearchParams({
     part: "snippet",
     channelId,
@@ -167,11 +175,13 @@ export async function fetchPopularVideos(
     key: apiKey,
   });
   if (publishedAfter) searchParams.set("publishedAfter", publishedAfter);
+  if (pageToken) searchParams.set("pageToken", pageToken);
 
   const searchData = await fetchJson(`${API_BASE}/search?${searchParams.toString()}`);
   const items: any[] = searchData.items ?? [];
+  const nextPageToken: string | null = searchData.nextPageToken ?? null;
   const videoIds: string[] = items.map((item) => item.id?.videoId).filter(Boolean);
-  if (videoIds.length === 0) return [];
+  if (videoIds.length === 0) return { videos: [], nextPageToken };
 
   const statsParams = new URLSearchParams({
     part: "statistics,contentDetails",
@@ -186,7 +196,7 @@ export async function fetchPopularVideos(
     durations.set(item.id, parseDurationSeconds(item.contentDetails?.duration));
   }
 
-  return items
+  const videos = items
     .filter((item) => item.id?.videoId)
     .filter((item) => {
       const duration = durations.get(item.id.videoId) ?? Number.MAX_SAFE_INTEGER;
@@ -201,4 +211,6 @@ export async function fetchPopularVideos(
       publishedAt: item.snippet?.publishedAt ?? "",
       viewCount: viewCounts.get(item.id.videoId) ?? 0,
     }));
+
+  return { videos, nextPageToken };
 }
