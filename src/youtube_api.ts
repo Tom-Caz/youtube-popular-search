@@ -6,6 +6,11 @@ export type VideoKind = "videos" | "shorts";
 // API's max of 50) keeps each page a whole number of rows.
 const MAX_RESULTS = 48;
 
+// Set to a small multiple of 4 (e.g. 20) while developing to limit how many
+// results each search.list call returns, then set back to null before
+// shipping.
+const DEV_MAX_RESULTS: number | null = null;
+
 // YouTube Shorts are at most 3 minutes long; everything longer is a regular video.
 const SHORTS_MAX_DURATION_SECONDS = 183;
 
@@ -168,7 +173,7 @@ export async function fetchPopularVideos(
   publishedAfter: string | null,
   videoKind: VideoKind,
   pageToken?: string,
-  maxResults = MAX_RESULTS
+  maxResults = DEV_MAX_RESULTS ?? MAX_RESULTS
 ): Promise<FetchPopularVideosResult> {
   const searchParams = new URLSearchParams({
     part: "snippet",
