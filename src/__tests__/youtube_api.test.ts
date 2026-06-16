@@ -310,7 +310,7 @@ describe("fetchPopularVideos", () => {
     expect(result.videos[0].thumbnailUrl).toBe("https://example.com/default.jpg");
   });
 
-  test("excludes a 3-minute (180s) video when videoKind is videos", async () => {
+  test("includes a 3-minute (180s) video when videoKind is videos", async () => {
     mockFetchWith(
       {
         items: [
@@ -332,7 +332,8 @@ describe("fetchPopularVideos", () => {
     );
 
     const result = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
-    expect(result.videos).toEqual([]);
+    expect(result.videos).toHaveLength(1);
+    expect(result.videos[0].videoId).toBe("shortVid");
   });
 
   test("includes a 3m4s (184s) video when videoKind is videos", async () => {
@@ -412,7 +413,7 @@ describe("fetchPopularVideos", () => {
     expect(result.videos).toEqual([]);
   });
 
-  test("a 3m3s (183s) video counts as a Short at the exact boundary", async () => {
+  test("a 3m3s (183s) video is included by the Shorts tab and also by the Videos tab", async () => {
     const baseSearch = {
       items: [
         {
@@ -439,7 +440,8 @@ describe("fetchPopularVideos", () => {
     vi.restoreAllMocks();
     mockFetchWith(baseSearch, baseVideos);
     const videosResult = await fetchPopularVideos("UCchannel", "api-key", null, "videos");
-    expect(videosResult.videos).toEqual([]);
+    expect(videosResult.videos).toHaveLength(1);
+    expect(videosResult.videos[0].videoId).toBe("boundaryVid");
   });
 
   test("a video missing from the statistics response is treated as a regular video", async () => {
