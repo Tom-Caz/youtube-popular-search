@@ -10,6 +10,10 @@
     "build:chrome": "webpack --config webpack/webpack.prod.js",
     "build:firefox": "webpack --config webpack/webpack.prod.js --env browser=firefox",
     "clean": "rimraf dist dist-firefox",
+    "version": "node scripts/sync-manifest-version.js && git add public/manifest.json",
+    "bump:patch": "npm version patch",
+    "bump:minor": "npm version minor",
+    "bump:major": "npm version major",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p src/__tests__/tsconfig.json",
     "style": "prettier --write \"src/**/*.{ts,tsx}\""
