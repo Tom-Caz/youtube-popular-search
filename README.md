@@ -59,6 +59,12 @@ Custom time ranges (This week / This month / This year) call the YouTube Data AP
 
 The free tier covers roughly 100 "Popular" lookups per day (each lookup uses about 101 of the default 10,000 daily quota units). "All time" doesn't require an API key.
 
+## Known limitations
+
+**Shorts tab results may include regular short videos.** The YouTube Data API doesn't expose a reliable flag to distinguish YouTube Shorts from regular videos that happen to be short. The extension uses a 3-minute duration threshold to filter Shorts tab results, but channels that post a lot of sub-3-minute content (news clips, highlights, etc.) will see those regular videos mixed into their Shorts tab results.
+
+**Videos tab results are unfiltered by duration.** Because of the same limitation above, the Videos tab shows all results by view count rather than trying to exclude Shorts — filtering by duration would incorrectly drop short regular videos from channels like NYPost. This means the occasional YouTube Short may appear in Videos tab results on channels where Shorts dominate the view count rankings.
+
 ## Permissions
 
 - **`storage`** — saves your YouTube Data API key and is the only thing this extension persists.
