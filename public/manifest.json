@@ -1,21 +1,17 @@
 {
   "manifest_version": 3,
-
   "name": "Popular by Date for YouTube",
   "description": "Adds a time-range dropdown (This week/This month/This year/All time) to YouTube's Popular sort, like Reddit's sort menu.",
   "version": "0.1.1",
-
   "options_ui": {
     "page": "options.html"
   },
-
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",
@@ -25,24 +21,27 @@
     },
     "default_popup": "popup.html"
   },
-
   "content_scripts": [
-      {
-          "matches": ["*://*.youtube.com/*"],
-          "js": ["js/vendor.js", "js/content_script.js"],
-          "css": ["content_script.css"],
-          "run_at": "document_idle"
-      }
+    {
+      "matches": [
+        "*://*.youtube.com/*"
+      ],
+      "js": [
+        "js/vendor.js",
+        "js/content_script.js"
+      ],
+      "css": [
+        "content_script.css"
+      ],
+      "run_at": "document_idle"
+    }
   ],
-
   "background": {
     "service_worker": "js/background.js"
   },
-
   "permissions": [
     "storage"
   ],
-
   "host_permissions": [
     "https://www.googleapis.com/youtube/v3/*"
   ]
