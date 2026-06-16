@@ -1,5 +1,13 @@
 import { PopularVideo } from "./youtube_api";
 
+// The YouTube Data API returns titles with HTML entities (e.g. &quot; for ").
+// A textarea is the simplest way to decode them in a browser context.
+function decodeHtml(str: string): string {
+  const el = document.createElement("textarea");
+  el.innerHTML = str;
+  return el.value;
+}
+
 export function ensureResultsPanel(richGrid: Element): HTMLElement {
   let panel = richGrid.querySelector<HTMLElement>(".ytps-results");
   if (!panel) {
@@ -116,8 +124,9 @@ function buildVideoCard(video: PopularVideo): HTMLElement {
 
   const title = document.createElement("div");
   title.className = "ytps-video-title";
-  title.textContent = video.title;
-  title.title = video.title;
+  const decodedTitle = decodeHtml(video.title);
+  title.textContent = decodedTitle;
+  title.title = decodedTitle;
 
   const meta = document.createElement("div");
   meta.className = "ytps-video-meta";
