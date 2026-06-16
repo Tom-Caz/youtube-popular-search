@@ -1,6 +1,6 @@
 {
   "name": "youtube-popular-search",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Chrome extension that adds a time-range dropdown to YouTube's Popular sort.",
   "scripts": {
     "watch": "webpack --config webpack/webpack.dev.js --watch",
