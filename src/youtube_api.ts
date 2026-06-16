@@ -208,9 +208,13 @@ export async function fetchPopularVideos(
   const videos = items
     .filter((item) => item.id?.videoId)
     .filter((item) => {
+      // Duration-based filtering only applies on the Shorts tab.
+      // On the Videos tab we can't distinguish YouTube Shorts from short-form
+      // regular videos (e.g. news clips) by duration alone, so we show all
+      // results and let view count ordering surface the most relevant ones.
+      if (videoKind === "videos") return true;
       const duration = durations.get(item.id.videoId) ?? Number.MAX_SAFE_INTEGER;
-      const isShort = duration <= SHORTS_MAX_DURATION_SECONDS;
-      return isShort === (videoKind === "shorts");
+      return duration <= SHORTS_MAX_DURATION_SECONDS;
     })
     .map((item) => ({
       videoId: item.id.videoId as string,
