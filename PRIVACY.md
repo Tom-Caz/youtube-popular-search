@@ -8,9 +8,10 @@ why.
 
 - **YouTube Data API key.** If you choose to use the "This week / This month / This year" time
   ranges, you provide your own YouTube Data API v3 key on the extension's Options page. This key
-  is saved using Chrome's `storage.sync` API, which means it is stored locally in your browser
-  profile and synced across your own signed-in Chrome instances by Google — it is never sent to
-  the developer or to any server other than Google's.
+  is saved using the browser's `storage.sync` API, which means it is stored locally in your
+  browser profile and synced across your own signed-in browser instances (by Google for Chrome,
+  by Mozilla for Firefox) — it is never sent to the developer or to any server other than the
+  browser vendor's sync service.
 - **Selected time range.** The extension keeps track of which time range (e.g. "This week") is
   currently selected, in memory, so it can be reapplied as you navigate between a channel's
   Videos and Shorts tabs. This is not persisted or transmitted anywhere.
