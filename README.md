@@ -4,6 +4,8 @@ A Chrome and Firefox extension that adds a time-range dropdown to the "Popular" 
 
 On a channel's Videos or Shorts tab, next to the "Latest" / "Popular" / "Oldest" chips, this extension adds a small caret to the "Popular" chip. Clicking the caret opens a menu with **This week**, **This month**, **This year**, and **All time**. Picking a range fetches that channel's most-viewed videos for the period via the YouTube Data API and renders them as a grid in place of YouTube's normal results (matching whichever tab — Videos or Shorts — you're on). Picking "All time" just triggers YouTube's native "Popular" (most-viewed) sort. Clicking the chip's body re-applies whichever range you last selected.
 
+Channels with a members-only section get a different chip bar from YouTube: a single dropdown chip showing the current sort (it opens YouTube's own Latest / Popular / Oldest sheet) followed by "Members only" and "Public" filter tabs. There the **Popular** row inside YouTube's sort sheet grows a `›` arrow, and hovering its right-hand end opens the same time-range menu. Picking a range switches YouTube to its Popular sort and renders that range's results in one pass. Once Popular is the active sort, the chip's own chevron opens the range menu directly, exactly as it does on a normal channel — anywhere else on the chip, its range text included, still opens YouTube's sheet, which is how you get back to Latest or Oldest. Changing the sort or a filter drops back to YouTube's own results.
+
 ## Features
 
 - Adds a dropdown caret to the "Popular" chip on YouTube channel pages
@@ -64,6 +66,8 @@ The free tier covers roughly 100 "Popular" lookups per day (each lookup uses abo
 **Shorts tab results may include regular short videos.** The YouTube Data API doesn't expose a reliable flag to distinguish YouTube Shorts from regular videos that happen to be short. The extension uses a 3-minute duration threshold to filter Shorts tab results, but channels that post a lot of sub-3-minute content (news clips, highlights, etc.) will see those regular videos mixed into their Shorts tab results.
 
 **Videos tab results are unfiltered by duration.** Because of the same limitation above, the Videos tab shows all results by view count rather than trying to exclude Shorts — filtering by duration would incorrectly drop short regular videos from channels like NYPost. This means the occasional YouTube Short may appear in Videos tab results on channels where Shorts dominate the view count rankings.
+
+**Members-only videos never appear in custom-range results.** The Data API only exposes public videos, so a custom range on a channel with a members-only section lists public uploads only. Selecting the "Members only" or "Public" filter clears the custom range and hands the grid back to YouTube.
 
 ## Permissions
 
