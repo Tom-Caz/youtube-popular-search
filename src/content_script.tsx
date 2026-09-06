@@ -59,10 +59,10 @@ const SHEET_ROOTS =
 const SUBMENU_OPEN_DELAY_MS = 120;
 // Covers the trip from the row to the submenu.
 const SUBMENU_CLOSE_DELAY_MS = 220;
-// Only the arrow end of the row opens the submenu — the rest of it is
-// YouTube's plain "Popular" — with a little slack so the pointer doesn't have
-// to land on the icon exactly.
-const SUBMENU_HOVER_SLACK = 8;
+// How far left of a chevron still counts as aiming at it. Neither the sheet
+// row's arrow nor the chip's own chevron should demand a pixel-perfect hit,
+// but everything beyond this belongs to YouTube.
+const TRIGGER_SLACK = 8;
 // How much wider than the row an ancestor can be and still be part of the
 // sheet (its padding, border and shadow) rather than the page behind it.
 const SHEET_PADDING_ALLOWANCE = 48;
@@ -97,15 +97,8 @@ let bypassNextSheetTap = false;
 // Set while the sort sheet might be opening, so the search for its rows stays
 // off the page's normal DOM churn.
 let sheetScanDeadline = 0;
-let sheetScanTimer: ReturnType<typeof setTimeout> | undefined;
 let submenuOpenTimer: ReturnType<typeof setTimeout> | undefined;
 let submenuCloseTimer: ReturnType<typeof setTimeout> | undefined;
-
-// Whether the sheet's "Popular" row was ever found. If it never is (YouTube
-// changed the sheet's markup), the chip's chevron takes over as the way into
-// the range menu — see useChevronFallback.
-let sheetEnhanced = false;
-let sheetDetectionFailed = false;
 
 // Set when we ask YouTube to switch to its Popular sort; until the chip's
 // label catches up, the sort looks "not Popular" and would otherwise trip the
@@ -602,10 +595,9 @@ function decorateChip(button: HTMLButtonElement): boolean {
 
 // YouTube renders a touch-feedback overlay on top of the whole chip, so
 // event.target is always that overlay, never our caret/range elements. Detect
-// a click on the dropdown trigger by comparing the click position to the
-// chip's layout instead. The trigger zone spans from the start of the range
-// text/caret to the chip's right edge (covering its trailing padding too), so
-// users don't have to hit the small text or icon exactly.
+// a click on the range trigger by comparing the click position to the chip's
+// layout instead. The zone always runs to the chip's right edge, covering its
+// trailing padding, so the small icon doesn't have to be hit exactly.
 function clickedRangeTrigger(button: HTMLButtonElement, event: MouseEvent): boolean {
   const caret = chipCaret(button);
   const rangeSpan = button.querySelector<HTMLElement>(".ytps-range");
@@ -615,7 +607,14 @@ function clickedRangeTrigger(button: HTMLButtonElement, event: MouseEvent): bool
   const rangeRect = rangeSpan.getBoundingClientRect();
   const buttonRect = button.getBoundingClientRect();
 
-  const triggerLeft = rangeRect.width > 0 ? Math.min(rangeRect.left, caretRect.left) : caretRect.left;
+  // On a plain chip the whole tail is ours, range text included, since the
+  // rest of the chip only re-applies the range. On the dropdown chip that
+  // tail is YouTube's sort sheet, so the range text stays theirs and only the
+  // chevron opens our menu.
+  let triggerLeft = caretRect.left - TRIGGER_SLACK;
+  if (!isDropdownChip(button) && rangeRect.width > 0) {
+    triggerLeft = Math.min(rangeRect.left, caretRect.left);
+  }
 
   return (
     buttonRect.width > 0 &&
@@ -677,32 +676,27 @@ function enhanceDropdownChip(button: HTMLButtonElement): void {
     (event) => {
       armSheetScan();
 
-      if (!useChevronFallback() || !isPopularActive(button)) return;
-      // Without the submenu the chevron is the only way into the range menu;
-      // the chip's label still opens YouTube's sheet.
-      if (!clickedRangeTrigger(button, event)) return;
+      // Once Popular is the active sort, the chevron goes straight to the
+      // range menu — the same one click the plain chip bar gives — rather
+      // than back through YouTube's sort sheet.
+      if (isPopularActive(button) && clickedRangeTrigger(button, event)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        toggleChipMenu(button);
+        return;
+      }
 
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      toggleChipMenu(button);
+      // Anywhere else on the chip is YouTube's sort sheet, which is how the
+      // user gets to Latest/Oldest — so hand the click over, and take our own
+      // menu down rather than leaving it sitting on top of the sheet.
+      closeMenu();
     },
     true
   );
 }
 
-// The fallback only engages once a sheet has been given its chance and no
-// "Popular" row turned up; a sheet we manage to read later wins for good.
-function useChevronFallback(): boolean {
-  return sheetDetectionFailed && !sheetEnhanced;
-}
-
 function armSheetScan(): void {
   sheetScanDeadline = Date.now() + SHEET_SCAN_WINDOW_MS;
-
-  clearTimeout(sheetScanTimer);
-  sheetScanTimer = setTimeout(() => {
-    if (!sheetEnhanced) sheetDetectionFailed = true;
-  }, SHEET_SCAN_WINDOW_MS);
 }
 
 // Hangs the range submenu off the "Popular" row of YouTube's sort sheet.
@@ -722,7 +716,7 @@ function enhanceSortSheetRow(root: ParentNode): void {
   // Hovering the row's label is YouTube's plain "Popular"; only its arrow end
   // opens the range menu.
   row.addEventListener("mousemove", (event) => {
-    if (event.clientX >= arrow.getBoundingClientRect().left - SUBMENU_HOVER_SLACK) {
+    if (event.clientX >= arrow.getBoundingClientRect().left - TRIGGER_SLACK) {
       scheduleSubmenuOpen(row, target);
       return;
     }
@@ -750,8 +744,6 @@ function enhanceSortSheetRow(root: ParentNode): void {
     requestGeneration++;
     resetSelectedRange();
   });
-
-  sheetEnhanced = true;
 }
 
 // Sheets are only ever opened from the dropdown chip, so this looks at the

@@ -3,6 +3,7 @@ import {
   standaloneDropdownChipBarHtml,
   sortSheetHtml,
   mockCaretBoundingClientRect,
+  clickCaret,
   hoverSheetArrow,
   hoverSheetLabel,
 } from "./content_script_fixtures";
@@ -192,20 +193,73 @@ afterEach(async () => {
 });
 
 describe("content_script: the range submenu in YouTube's sort sheet", () => {
-  it("decorates the dropdown chip but leaves its behaviour to YouTube", () => {
+  it("decorates the dropdown chip but leaves it to YouTube while another sort is active", () => {
     const chip = sortChip();
 
     expect(chip.getAttribute("data-ytps-dropdown")).toBe("true");
     expect(rangeSpan()).not.toBeNull();
     expect(rangeSpan().textContent).toBe("");
-    // No caret of ours, and no aria-haspopup: the chip's chevron is YouTube's
-    // way into its sort sheet.
+    // No caret of ours: the chip has YouTube's own chevron.
     expect(chip.querySelector(".ytps-caret")).toBeNull();
-    expect(chip.hasAttribute("aria-haspopup")).toBe(false);
 
     const event = clickChipAt(109);
 
     expect(event.defaultPrevented).toBe(false);
+    expect(document.querySelector(".ytps-menu")).toBeNull();
+  });
+
+  it("opens the range menu straight from the chevron once Popular is the active sort", async () => {
+    await setNativeSort("Popular");
+
+    clickCaret(chevron());
+
+    expect(document.querySelector(".ytps-menu")).not.toBeNull();
+    expect(Array.from(document.querySelectorAll(".ytps-menu-item")).map((el) => el.textContent)).toEqual([
+      "This week",
+      "This month",
+      "This year",
+      "All time",
+    ]);
+
+    menuItem("This week").click();
+
+    await vi.waitFor(() => expect(rangeSpan().textContent).toBe(" · This week"));
+    expect(resultsPanel()).not.toBeNull();
+    expect(contentsHidden()).toBe(true);
+
+    // ...and again, without going through the sheet: one click to the ranges.
+    clickCaret(chevron());
+    expect(document.querySelector(".ytps-menu")).not.toBeNull();
+    menuItem("All time").click();
+
+    await vi.waitFor(() => expect(rangeSpan().textContent).toBe(" · All time"));
+    expect(resultsPanel()).toBeNull();
+  });
+
+  it("keeps the rest of the chip — the range text included — on YouTube's sort sheet", async () => {
+    await setNativeSort("Popular");
+    clickCaret(chevron());
+    menuItem("This week").click();
+    await vi.waitFor(() => expect(rangeSpan().textContent).toBe(" · This week"));
+
+    // The range text sits between the label and the chevron; clicking it is
+    // still a click on the chip, not on our menu's trigger.
+    expect(clickChipAt(69).defaultPrevented).toBe(false);
+    expect(document.querySelector(".ytps-menu")).toBeNull();
+
+    expect(clickChipAt(10).defaultPrevented).toBe(false);
+    expect(document.querySelector(".ytps-menu")).toBeNull();
+  });
+
+  it("gets out of the way when the click belongs to YouTube's sheet", async () => {
+    await setNativeSort("Popular");
+
+    clickCaret(chevron());
+    expect(document.querySelector(".ytps-menu")).not.toBeNull();
+
+    // With our menu open, clicking the chip's label has to hand over to
+    // YouTube rather than leave two menus fighting over the chip.
+    expect(clickChipAt(10).defaultPrevented).toBe(false);
     expect(document.querySelector(".ytps-menu")).toBeNull();
   });
 
