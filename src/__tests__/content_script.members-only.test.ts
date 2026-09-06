@@ -3,6 +3,8 @@ import {
   standaloneDropdownChipBarHtml,
   sortSheetHtml,
   mockCaretBoundingClientRect,
+  hoverSheetArrow,
+  hoverSheetLabel,
 } from "./content_script_fixtures";
 import type { PopularVideo } from "../youtube_api";
 
@@ -143,8 +145,14 @@ async function openSortSheet(): Promise<HTMLElement> {
 }
 
 async function hoverPopularRow(): Promise<void> {
-  sheetRow("Popular").dispatchEvent(new MouseEvent("mouseenter"));
+  hoverSheetArrow(sheetRow("Popular"));
   await vi.waitFor(() => expect(document.querySelector(".ytps-menu")).not.toBeNull());
+}
+
+function clickChipAt(clientX: number): MouseEvent {
+  const event = new MouseEvent("click", { bubbles: true, cancelable: true, clientX, clientY: 9 });
+  sortChip().dispatchEvent(event);
+  return event;
 }
 
 // The whole flow the submenu exists for: open the sheet, hover Popular, pick a
@@ -195,8 +203,7 @@ describe("content_script: the range submenu in YouTube's sort sheet", () => {
     expect(chip.querySelector(".ytps-caret")).toBeNull();
     expect(chip.hasAttribute("aria-haspopup")).toBe(false);
 
-    const event = new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 109, clientY: 9 });
-    chevron().dispatchEvent(event);
+    const event = clickChipAt(109);
 
     expect(event.defaultPrevented).toBe(false);
     expect(document.querySelector(".ytps-menu")).toBeNull();
@@ -215,6 +222,20 @@ describe("content_script: the range submenu in YouTube's sort sheet", () => {
     expect(sheetRow("Popular").querySelector(".ytps-submenu-arrow")).not.toBeNull();
     expect(sheetRow("Latest").querySelector(".ytps-submenu-arrow")).toBeNull();
     expect(sheetRow("Oldest").querySelector(".ytps-submenu-arrow")).toBeNull();
+  });
+
+  it("opens the range menu only from the arrow end of the row", async () => {
+    const row = await openSortSheet();
+
+    hoverSheetLabel(row);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(document.querySelector(".ytps-menu")).toBeNull();
+
+    await hoverPopularRow();
+
+    // Moving back over the label closes it again.
+    hoverSheetLabel(row);
+    await vi.waitFor(() => expect(document.querySelector(".ytps-menu")).toBeNull());
   });
 
   it("opens the range menu on hover and closes it when the pointer leaves", async () => {

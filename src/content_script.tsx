@@ -57,8 +57,15 @@ const SHEET_ROOTS =
 // Long enough not to fire while the pointer merely crosses the row on its way
 // to another sort, short enough to feel immediate.
 const SUBMENU_OPEN_DELAY_MS = 120;
-// Covers the gap between the row and the submenu.
+// Covers the trip from the row to the submenu.
 const SUBMENU_CLOSE_DELAY_MS = 220;
+// Only the arrow end of the row opens the submenu — the rest of it is
+// YouTube's plain "Popular" — with a little slack so the pointer doesn't have
+// to land on the icon exactly.
+const SUBMENU_HOVER_SLACK = 8;
+// How much wider than the row an ancestor can be and still be part of the
+// sheet (its padding, border and shadow) rather than the page behind it.
+const SHEET_PADDING_ALLOWANCE = 48;
 
 // How long to wait for YouTube to repaint the chip label after we've asked it
 // to switch to its Popular sort, before concluding the switch isn't coming.
@@ -181,8 +188,7 @@ function chipCaret(button: HTMLElement): HTMLElement | null {
 }
 
 function closeMenu(): void {
-  clearTimeout(submenuOpenTimer);
-  clearTimeout(submenuCloseTimer);
+  cancelSubmenuTimers();
 
   if (!currentMenu) return;
 
@@ -218,17 +224,37 @@ function positionMenu(menu: HTMLElement, button: HTMLButtonElement): void {
   menu.style.left = `${rect.left}px`;
 }
 
-// Beside the sheet row, like a native submenu, flipping to the row's other
-// side (and sliding up) rather than overflowing the viewport.
+// The row sits inside the sheet's padding, so hugging the row's own edge
+// would leave a gap between the two menus. Grow the anchor out to the widest
+// ancestor that's still sheet-sized.
+function submenuAnchor(row: HTMLElement): { left: number; right: number; top: number } {
+  const rowRect = row.getBoundingClientRect();
+  let left = rowRect.left;
+  let right = rowRect.right;
+
+  for (let el = row.parentElement; el; el = el.parentElement) {
+    const rect = el.getBoundingClientRect();
+    // The first ancestor wider than a menu is the page behind the sheet.
+    if (rect.width > rowRect.width + SHEET_PADDING_ALLOWANCE) break;
+
+    left = Math.min(left, rect.left);
+    right = Math.max(right, rect.right);
+  }
+
+  return { left, right, top: rowRect.top };
+}
+
+// Flush against the sheet, like a native submenu, flipping to its other side
+// (and sliding up) rather than overflowing the viewport.
 function positionSubmenu(menu: HTMLElement, row: HTMLElement): void {
-  const rect = row.getBoundingClientRect();
+  const anchor = submenuAnchor(row);
 
   const left =
-    rect.right + menu.offsetWidth + 8 > window.innerWidth ? rect.left - menu.offsetWidth - 4 : rect.right + 4;
-  const top = Math.min(rect.top, Math.max(8, window.innerHeight - menu.offsetHeight - 8));
+    anchor.right + menu.offsetWidth > window.innerWidth ? anchor.left - menu.offsetWidth : anchor.right;
+  const top = Math.min(anchor.top, Math.max(8, window.innerHeight - menu.offsetHeight - 8));
 
   menu.style.top = `${Math.max(8, top)}px`;
-  menu.style.left = `${Math.max(8, left)}px`;
+  menu.style.left = `${Math.max(0, left)}px`;
 }
 
 // The range suffix (e.g. "· This week") only makes sense while the Popular
@@ -492,19 +518,30 @@ function toggleSheetMenu(row: HTMLElement, target: HTMLElement): void {
 function cancelSubmenuTimers(): void {
   clearTimeout(submenuOpenTimer);
   clearTimeout(submenuCloseTimer);
+  submenuOpenTimer = undefined;
+  submenuCloseTimer = undefined;
 }
 
 function scheduleSubmenuOpen(row: HTMLElement, target: HTMLElement): void {
-  cancelSubmenuTimers();
-  if (currentMenu && menuAnchor === row) return;
+  clearTimeout(submenuCloseTimer);
+  submenuCloseTimer = undefined;
 
-  submenuOpenTimer = setTimeout(() => openSheetMenu(row, target), SUBMENU_OPEN_DELAY_MS);
+  // Already open, or already on its way: a pointer moving inside the arrow's
+  // zone must not keep restarting the countdown.
+  if (currentMenu && menuAnchor === row) return;
+  if (submenuOpenTimer !== undefined) return;
+
+  submenuOpenTimer = setTimeout(() => {
+    submenuOpenTimer = undefined;
+    openSheetMenu(row, target);
+  }, SUBMENU_OPEN_DELAY_MS);
 }
 
 function scheduleSubmenuClose(): void {
   cancelSubmenuTimers();
 
   submenuCloseTimer = setTimeout(() => {
+    submenuCloseTimer = undefined;
     // Only ever closes a sheet submenu: the chip's menu is click-driven.
     if (menuAnchor?.hasAttribute(SHEET_ROW_ATTR)) closeMenu();
   }, SUBMENU_CLOSE_DELAY_MS);
@@ -682,7 +719,19 @@ function enhanceSortSheetRow(root: ParentNode): void {
   const arrow = buildCaret("ytps-submenu-arrow");
   row.appendChild(arrow);
 
-  row.addEventListener("mouseenter", () => scheduleSubmenuOpen(row, target));
+  // Hovering the row's label is YouTube's plain "Popular"; only its arrow end
+  // opens the range menu.
+  row.addEventListener("mousemove", (event) => {
+    if (event.clientX >= arrow.getBoundingClientRect().left - SUBMENU_HOVER_SLACK) {
+      scheduleSubmenuOpen(row, target);
+      return;
+    }
+
+    clearTimeout(submenuOpenTimer);
+    submenuOpenTimer = undefined;
+    if (currentMenu && menuAnchor === row) scheduleSubmenuClose();
+  });
+
   row.addEventListener("mouseleave", scheduleSubmenuClose);
 
   // Keyboard and touch users get the same menu without the hover.

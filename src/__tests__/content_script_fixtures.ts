@@ -83,6 +83,36 @@ const BUTTON_RECT: DOMRect = {
   },
 };
 
+// A sheet row and the submenu arrow at its right end: only the arrow's end of
+// the row opens the range submenu, so hovering has to be positional here too.
+const SHEET_ROW_RECT: DOMRect = {
+  x: 0,
+  y: 40,
+  left: 0,
+  top: 40,
+  right: 226,
+  bottom: 76,
+  width: 226,
+  height: 36,
+  toJSON() {
+    return this;
+  },
+};
+
+const SUBMENU_ARROW_RECT: DOMRect = {
+  x: 200,
+  y: 49,
+  left: 200,
+  top: 49,
+  right: 218,
+  bottom: 67,
+  width: 18,
+  height: 18,
+  toJSON() {
+    return this;
+  },
+};
+
 export function mockCaretBoundingClientRect(): void {
   const original = Element.prototype.getBoundingClientRect;
   Element.prototype.getBoundingClientRect = function (this: Element): DOMRect {
@@ -90,6 +120,8 @@ export function mockCaretBoundingClientRect(): void {
     // The dropdown chip has no caret of ours: YouTube's own chevron
     // (.ytChipShapeIconEnd) is what opens our menu there.
     if (this.classList.contains("ytChipShapeIconEnd")) return CARET_RECT;
+    if (this.classList.contains("ytps-submenu-arrow")) return SUBMENU_ARROW_RECT;
+    if (this.classList.contains("ytps-sheet-row")) return SHEET_ROW_RECT;
     if (this.classList.contains("ytps-range")) return RANGE_RECT;
     if (this instanceof HTMLButtonElement) return BUTTON_RECT;
     return original.call(this);
@@ -110,6 +142,17 @@ export function clickRangeText(rangeSpan: Element): void {
 // caret's right edge but still within the chip's mocked bounding box.
 export function clickTrailingPadding(button: Element): void {
   button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 130, clientY: 9 }));
+}
+
+// Moves the pointer over the arrow end of a sheet row — the only part of it
+// that opens the range submenu.
+export function hoverSheetArrow(row: Element): void {
+  row.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 209, clientY: 58 }));
+}
+
+// Moves the pointer over the row's label instead, left of the arrow.
+export function hoverSheetLabel(row: Element): void {
+  row.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 20, clientY: 58 }));
 }
 
 // Channels with a members-only section get a different chip bar: the sort is
