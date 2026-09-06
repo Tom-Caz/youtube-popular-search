@@ -87,6 +87,9 @@ export function mockCaretBoundingClientRect(): void {
   const original = Element.prototype.getBoundingClientRect;
   Element.prototype.getBoundingClientRect = function (this: Element): DOMRect {
     if (this.classList.contains("ytps-caret")) return CARET_RECT;
+    // The dropdown chip has no caret of ours: YouTube's own chevron
+    // (.ytChipShapeIconEnd) is what opens our menu there.
+    if (this.classList.contains("ytChipShapeIconEnd")) return CARET_RECT;
     if (this.classList.contains("ytps-range")) return RANGE_RECT;
     if (this instanceof HTMLButtonElement) return BUTTON_RECT;
     return original.call(this);
@@ -107,6 +110,72 @@ export function clickRangeText(rangeSpan: Element): void {
 // caret's right edge but still within the chip's mocked bounding box.
 export function clickTrailingPadding(button: Element): void {
   button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 130, clientY: 9 }));
+}
+
+// Channels with a members-only section get a different chip bar: the sort is
+// a single dropdown chip (a combobox labelled with the active sort, opening
+// YouTube's own Latest/Popular/Oldest sheet) followed by "Members only" and
+// "Public" filter tabs.
+export function dropdownChipBarFixtureHtml(sortLabel = "Latest"): string {
+  return `
+    <ytd-rich-grid-renderer>
+      <div id="header">
+        <chip-bar-view-model>
+          <chip-view-model>
+            <button role="combobox" aria-selected="false">
+              <div class="ytChipShapeChip ytChipShapeInactive ytChipShapeEndIconPadding"><div>${sortLabel}</div><yt-touch-feedback-shape aria-hidden="true"><div></div></yt-touch-feedback-shape><span class="ytIconWrapperHost ytChipShapeIconEnd"><svg></svg></span></div>
+            </button>
+          </chip-view-model>
+          <chip-view-model>
+            <button role="tab" aria-label="Members only" aria-selected="false">
+              <div class="ytChipShapeChip ytChipShapeInactive"><div>Members only</div></div>
+            </button>
+          </chip-view-model>
+          <chip-view-model>
+            <button role="tab" aria-label="Public" aria-selected="false">
+              <div class="ytChipShapeChip ytChipShapeInactive"><div>Public</div></div>
+            </button>
+          </chip-view-model>
+        </chip-bar-view-model>
+      </div>
+      <div id="contents">
+        <div class="native-video">native grid content</div>
+      </div>
+    </ytd-rich-grid-renderer>
+    <ytd-popup-container></ytd-popup-container>
+  `;
+}
+
+// YouTube's sort sheet, as opened from the dropdown chip. Its markup is built
+// client-side and its class names are undocumented, so this fixture uses
+// deliberately meaningless ones: the extension has to find the "Popular" row
+// structurally (see src/sort_sheet.ts). The checkmark on the active sort is
+// here on purpose — a row carries more than its label.
+export function sortSheetHtml(activeSort = "Latest"): string {
+  const item = (label: string) =>
+    `<yt-list-item-view-model class="Xq3f"><div class="k2P"><span class="a1B">${label}</span></div>` +
+    (label === activeSort ? '<span class="c8N">✓</span>' : "") +
+    `</yt-list-item-view-model>`;
+
+  return `
+    <yt-sheet-view-model class="Zz9">
+      <yt-list-view-model class="Q4r">${item("Latest")}${item("Popular")}${item("Oldest")}</yt-list-view-model>
+    </yt-sheet-view-model>
+  `;
+}
+
+// A dropdown chip that looks like the sort chip but isn't inside a channel's
+// video grid (e.g. a chip bar elsewhere on YouTube).
+export function standaloneDropdownChipBarHtml(): string {
+  return `
+    <chip-bar-view-model id="unrelated-dropdown-chip-bar">
+      <chip-view-model>
+        <button role="combobox" aria-selected="false">
+          <div class="ytChipShapeChip ytChipShapeInactive ytChipShapeEndIconPadding"><div>Popular</div><span class="ytIconWrapperHost ytChipShapeIconEnd"><svg></svg></span></div>
+        </button>
+      </chip-view-model>
+    </chip-bar-view-model>
+  `;
 }
 
 export function standaloneChipBarHtml(): string {
